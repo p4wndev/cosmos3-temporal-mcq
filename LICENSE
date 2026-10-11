@@ -1,0 +1,80 @@
+NO LICENSE GRANTED — PRE-PUBLICATION NOTICE
+===========================================
+
+Copyright (c) 2026 the cosmos3-temporal-mcq project contributors.
+
+This repository is NOT yet licensed for use, copying, modification, or
+redistribution. No license is granted, whether express or implied, by
+publication of this repository.
+
+WHY NO LICENSE HAS BEEN CHOSEN
+------------------------------
+
+This repository contains several distinct kinds of material whose rights are
+not all the same, and at least one of which is not yet resolved:
+
+1. CODE AND DOCUMENTATION (src/, scripts/, tests/, docs/, configs/, README.md,
+   and the other prose files). These are original works of this project. A
+   license *could* be chosen for them, but the choice is deliberately deferred
+   until item 3 below is settled, because a single root LICENSE would appear to
+   cover the whole repository.
+
+2. DERIVED ANNOTATIONS (the generated multiple-choice questions and their
+   metadata). These are generated from the synthetic captions of the source
+   dataset. Whether they are a "derivative work" of that dataset, and what
+   obligations that carries, has NOT been determined.
+
+3. SOURCE DATASET AND UNDERLYING MEDIA. The source dataset
+   (nvidia/BridgeData2-Subset-Synthetic-Captions) is released under the OpenMDW
+   1.1 license. That license does NOT automatically extend to this project's
+   code, to the derived annotations, or to the underlying BridgeData V2 video.
+   Rights to redistribute the videos have not been established.
+
+Applying a permissive license (MIT, Apache-2.0, BSD, ...) to this repository
+would misrepresent the rights situation, because it would purport to grant
+rights over material this project may not hold. Applying a restrictive license
+would be equally unfounded. Therefore no license is granted.
+
+WHAT THIS MEANS IN PRACTICE
+---------------------------
+
+- The repository is public for INSPECTION and REVIEW only.
+- Do not redistribute, reuse, or build upon it until a license is added.
+- The raw dataset, prepared video trees, full annotations, caption extracts,
+  and contact sheets are NOT included in this repository. See .gitignore and
+  docs/dataset_provenance.md.
+
+RESOLVING THIS
+--------------
+
+See docs/dataset_provenance.md, section 3 ("Unresolved questions"). Before
+publishing or licensing, the owner must:
+
+  a. determine whether the OpenMDW 1.1 license permits redistributing the
+     derived annotations, and under what conditions;
+  b. decide whether to publish the annotations at all, or only the code and
+     aggregate statistics;
+  c. choose a license for the code, and replace this file with it; and
+  d. if a separate license is appropriate for the annotations, state it
+     explicitly and scope it clearly.
+
+Until then, this file records the absence of a license rather than inventing
+one.
+
+THIRD-PARTY NOTICES
+-------------------
+
+This project consumes, but does not redistribute, material from:
+
+  BridgeData2 Subset Synthetic Captions
+    https://huggingface.co/datasets/nvidia/BridgeData2-Subset-Synthetic-Captions
+    License: OpenMDW 1.1 (https://openmdw.ai/license/)
+    Owner: NVIDIA Corporation
+
+  BridgeData V2
+    https://rail-berkeley.github.io/bridgedata/
+    Walke et al., "BridgeData V2: A Dataset for Robot Learning at Scale",
+    CoRL 2023, arXiv:2308.12952
+
+Users who obtain the source dataset must comply with its license terms
+separately. See CITATION.cff and docs/dataset_provenance.md.

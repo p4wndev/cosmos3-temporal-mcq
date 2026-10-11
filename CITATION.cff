@@ -1,0 +1,92 @@
+# Citation metadata for this repository.
+#
+# PLACEHOLDERS the repository owner MUST replace before publishing:
+#   - "OWNER"            -> your GitHub username or organization
+#   - repository-code    -> the public repository URL
+#   - authors given/family names and affiliation
+#   - date-released      -> the release date
+#
+# Nothing below claims a DOI, a publication, or an accepted paper. None exists.
+cff-version: 1.2.0
+message: "If you use this software or dataset, please cite it using the metadata below."
+title: "cosmos3-temporal-mcq: Video MCQ dataset preparation for temporal reasoning in robot manipulation"
+abstract: >-
+  Reproducible, CPU-only tooling that prepares a video multiple-choice question
+  answering dataset for temporal reasoning and robot-manipulation understanding,
+  targeting Cosmos 3 Nano and TAO Cosmos-RL. The repository covers source
+  dataset auditing, caption-grounded question generation, source-video-level
+  splitting with leakage prevention, TAO tao-vl-reason-v1.0 schema export, and
+  automated validation. It does not train or evaluate a model, and its generated
+  answers are caption-grounded candidates pending human visual verification.
+type: software
+license: LicenseRef-Not-Yet-Determined
+license-url: "https://github.com/OWNER/cosmos3-temporal-mcq/blob/main/LICENSE"
+repository-code: "https://github.com/OWNER/cosmos3-temporal-mcq"
+url: "https://github.com/OWNER/cosmos3-temporal-mcq"
+keywords:
+  - video question answering
+  - temporal reasoning
+  - robot manipulation
+  - multimodal
+  - dataset
+  - cosmos
+  - cosmos-rl
+  - nvidia tao
+version: "0.1.0"
+date-released: "2026-10-11"
+authors:
+  # PLACEHOLDER: replace with the real author(s) of this repository.
+  # No affiliation is asserted here because none has been confirmed.
+  - family-names: "OWNER"
+    given-names: "REPLACE"
+    # affiliation: "REPLACE"
+preferred-citation:
+  # This project has no publication. The entry below is the UPSTREAM dataset and
+  # paper this work builds on, which users should cite alongside this software.
+  type: conference-paper
+  title: "BridgeData V2: A Dataset for Robot Learning at Scale"
+  authors:
+    - family-names: "Walke"
+      given-names: "Homer"
+    - family-names: "Black"
+      given-names: "Kevin"
+    - family-names: "Lee"
+      given-names: "Abraham"
+    - family-names: "Kim"
+      given-names: "Moo Jin"
+    - family-names: "Du"
+      given-names: "Max"
+    - family-names: "Zheng"
+      given-names: "Chongyi"
+    - family-names: "Zhao"
+      given-names: "Tony"
+    - family-names: "Hansen-Estruch"
+      given-names: "Philippe"
+    - family-names: "Vuong"
+      given-names: "Quan"
+    - family-names: "He"
+      given-names: "Andre"
+    - family-names: "Myers"
+      given-names: "Vivek"
+    - family-names: "Fang"
+      given-names: "Kuan"
+    - family-names: "Finn"
+      given-names: "Chelsea"
+    - family-names: "Levine"
+      given-names: "Sergey"
+  conference:
+    name: "Conference on Robot Learning (CoRL)"
+  year: 2023
+  notes: "arXiv:2308.12952"
+references:
+  - type: dataset
+    title: "BridgeData2 Subset Synthetic Captions"
+    authors:
+      - name: "NVIDIA Corporation"
+    repository-code: "https://huggingface.co/datasets/nvidia/BridgeData2-Subset-Synthetic-Captions"
+    license: LicenseRef-OpenMDW-1.1
+    license-url: "https://openmdw.ai/license/"
+    notes: >-
+      Source dataset consumed by this project. Not redistributed here. Revision
+      e841d88db9f36caa4c805c31509712676c0fda0e. Captions are synthetic and
+      unverified.
