@@ -25,6 +25,10 @@ DATASET_REPORTS_DIR = DATASET_DIR / "reports"
 REPORTS_DIR = PROJECT_ROOT / "reports"
 CONTACT_SHEETS_DIR = REPORTS_DIR / "contact_sheets"
 
+# Human review decisions.  A local record of human judgement, kept out of
+# version control: the dataset itself is not redistributed.
+REVIEW_DECISIONS = REPORTS_DIR / "review_decisions.jsonl"
+
 # Committed inputs/outputs.
 CONFIGS_DIR = PROJECT_ROOT / "configs"
 DOCS_DIR = PROJECT_ROOT / "docs"
