@@ -1,0 +1,65 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "temporal-mcq"
+version = "0.1.0"
+description = "Reproducible video MCQ dataset preparation and evaluation tooling for temporal reasoning in robot manipulation, targeting Cosmos 3 Nano and TAO Cosmos-RL."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "LicenseRef-Not-Yet-Determined" }
+keywords = [
+  "video-question-answering",
+  "temporal-reasoning",
+  "robot-manipulation",
+  "cosmos",
+  "tao",
+  "cosmos-rl",
+  "dataset",
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "Programming Language :: Python :: 3",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Private :: Do Not Upload",
+]
+# No dependencies are declared as required: the validation path runs on the
+# standard library alone.  The extras below carry versions verified in this
+# project's virtualenv; see README "Installation".
+dependencies = []
+
+[project.optional-dependencies]
+# Verified working together on Python 3.13 in this project's venv.
+data = [
+  "huggingface_hub==2.2.0",
+  "pillow==12.3.0",
+  "numpy==2.5.4",
+]
+# pytest is NOT yet installed or exercised in this project.  It is listed as a
+# declared, unverified dependency for the future test suite.
+test = [
+  "pytest",
+]
+# PyYAML is needed only to load configs/dataset.yaml programmatically.
+config = [
+  "pyyaml",
+]
+
+[project.scripts]
+temporal-mcq = "temporal_mcq.cli:main"
+
+[project.urls]
+Repository = "https://github.com/OWNER/cosmos3-temporal-mcq"
+Issues = "https://github.com/OWNER/cosmos3-temporal-mcq/issues"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

@@ -1,0 +1,83 @@
+# Dataset preparation configuration.
+#
+# These values mirror the defaults in src/temporal_mcq/*.py and record the
+# exact settings used to produce the currently published statistics.  The
+# pipeline is deterministic for a fixed `seed`.
+
+dataset:
+  name: bridgedata2_temporal_mcq
+  output_dir: bridgedata2_temporal_mcq
+
+source:
+  repo_id: nvidia/BridgeData2-Subset-Synthetic-Captions
+  repo_type: dataset
+  # Immutable revision the published statistics were produced from.
+  revision: e841d88db9f36caa4c805c31509712676c0fda0e
+  license: openmdw-license-agreement-version-1.1
+  raw_root: data/raw/bridgedata2
+  # The dataset is public and ungated; HF_TOKEN is read from the environment
+  # only if set, and its value is never printed or written to disk.
+  requires_token: false
+
+video:
+  # Fixed source properties, verified by decode probe (see reports/dataset_audit.md).
+  width: 256
+  height: 256
+  fps: 5
+  # frame index == round(seconds * fps)
+  frame_index_from_seconds: fps
+
+generation:
+  seed: 20261011
+  # Questions kept per source clip (one per category, then trimmed to this cap).
+  per_clip: 2
+  task_categories:
+    - action_object_understanding
+    - temporal_order_state_change
+    - observed_outcome
+  # Answer options are always four letters.
+  option_letters: [A, B, C, D]
+  # The assistant turn is the option letter only, for exact-match scoring.
+  answer_format: letter
+  # Every generated answer is caption-grounded and awaits visual confirmation.
+  initial_verification_status: pending
+
+split:
+  # Splitting is at the source-video level so a clip cannot straddle splits.
+  level: source_video
+  seed: 20261011
+  proportions:
+    train: 0.80
+    val: 0.10
+    test: 0.10
+  # The test split is frozen: do not tune prompts, hyperparameters, or
+  # model-development decisions against it.
+  frozen_splits: [test]
+
+tao:
+  # Task-aware video reasoning family consumed by the Cosmos-RL hook
+  # cosmos_rl/tools/custom_hooks/tao_vl_reason_daft_sft_example.py
+  dataset_family: task_aware_video_reasoning
+  format: tao-vl-reason-v1.0
+  task: mcq
+  metric: accuracy
+  answer_type: letter
+  # Canonical media key required by the validator.  A plain `video` field is
+  # rejected for task-aware records.
+  media_key: video_id
+  media_root: videos
+
+validation:
+  # Hard failures block publication; soft failures are reported and reviewed.
+  fail_on_soft: false
+  # Exhaustive frame-count probing is capped by default; 0 probes every video.
+  max_frame_probes: 60
+  # Answer-letter share above this in a split is reported as a soft failure.
+  max_answer_share: 0.40
+  min_split_size_for_balance_check: 40
+
+review:
+  # Human visual verification has NOT been performed.  See docs/human_review.md.
+  status: pending
+  decisions_file: reports/review_decisions.jsonl
+  statuses: [verified, incorrect, ambiguous, unverifiable]
