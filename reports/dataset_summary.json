@@ -1,0 +1,76 @@
+{
+ "seed": 20261011,
+ "source_dataset": "nvidia/BridgeData2-Subset-Synthetic-Captions",
+ "source_revision": "e841d88db9f36caa4c805c31509712676c0fda0e",
+ "source_clips_total": 1273,
+ "source_clips_used": 641,
+ "questions_total": 1052,
+ "candidates_generated": 1052,
+ "accepted": 1052,
+ "dropped_by_assembly": 0,
+ "rejected_total": 1865,
+ "rejected_by_stage": {
+  "build": 1603,
+  "consistency": 188,
+  "object": 64,
+  "dedupe": 10
+ },
+ "splits": {
+  "test": {
+   "unique_videos": 64,
+   "questions": 103,
+   "by_category": {
+    "action_object_understanding": 47,
+    "observed_outcome": 24,
+    "temporal_order_state_change": 32
+   },
+   "answer_distribution": {
+    "A": 27,
+    "B": 25,
+    "C": 26,
+    "D": 25
+   },
+   "questions_per_video_mean": 1.609
+  },
+  "train": {
+   "unique_videos": 513,
+   "questions": 844,
+   "by_category": {
+    "action_object_understanding": 385,
+    "observed_outcome": 205,
+    "temporal_order_state_change": 254
+   },
+   "answer_distribution": {
+    "A": 212,
+    "B": 219,
+    "C": 208,
+    "D": 205
+   },
+   "questions_per_video_mean": 1.645
+  },
+  "val": {
+   "unique_videos": 64,
+   "questions": 105,
+   "by_category": {
+    "action_object_understanding": 44,
+    "observed_outcome": 27,
+    "temporal_order_state_change": 34
+   },
+   "answer_distribution": {
+    "A": 25,
+    "B": 20,
+    "C": 28,
+    "D": 32
+   },
+   "questions_per_video_mean": 1.641
+  }
+ },
+ "validation": {
+  "hard_failures": 0,
+  "soft_failures": 0
+ },
+ "disk_usage_bytes": {
+  "source_raw": 663203095,
+  "dataset_metadata": 4042885
+ }
+}
