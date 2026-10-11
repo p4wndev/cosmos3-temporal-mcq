@@ -51,8 +51,8 @@ config = [
 temporal-mcq = "temporal_mcq.cli:main"
 
 [project.urls]
-Repository = "https://github.com/OWNER/cosmos3-temporal-mcq"
-Issues = "https://github.com/OWNER/cosmos3-temporal-mcq/issues"
+Repository = "https://github.com/p4wndev/cosmos3-temporal-mcq"
+Issues = "https://github.com/p4wndev/cosmos3-temporal-mcq/issues"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
