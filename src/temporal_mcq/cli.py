@@ -20,21 +20,30 @@ COMMANDS = {
     "validate": "temporal_mcq.validate",
     "reports": "temporal_mcq.reports",
     "sheets": "temporal_mcq.sheets",
+    "review-server": "temporal_mcq.review_server",
+    "review-summary": "temporal_mcq.review",
 }
 
 USAGE = """usage: python -m temporal_mcq <command> [options]
 
 commands:
-  download   fetch the source dataset into data/raw/bridgedata2/
-  audit      write reports/dataset_audit.md from the source dataset
-  generate   generate candidate MCQ questions from structured captions
-  build      split by source video and emit TAO annotations
-  validate   run CPU-only dataset and TAO schema validation
-  reports    write dataset_summary.json, quality_report.md, split_report.md
-  sheets     build contact sheets for human visual review
+  download        fetch the source dataset into data/raw/bridgedata2/
+  audit           write reports/dataset_audit.md from the source dataset
+  generate        generate candidate MCQ questions from structured captions
+  build           split by source video and emit TAO annotations
+  validate        run CPU-only dataset and TAO schema validation
+  reports         write dataset_summary.json, quality_report.md, split_report.md
+  sheets          build contact sheets for human visual review
+  review-server   serve the local human visual-verification interface
+  review-summary  summarise review decisions and remaining unreviewed items
 
 Run `python -m temporal_mcq <command> --help` for stage-specific options.
 """
+
+# Commands whose module exposes a differently named entry point.
+ENTRY_POINTS = {
+    "review-summary": "summary_main",
+}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -49,8 +58,9 @@ def main(argv: list[str] | None = None) -> int:
         print(USAGE, file=sys.stderr)
         return 2
     module = importlib.import_module(module_name)
+    entry = getattr(module, ENTRY_POINTS.get(command, "main"))
     sys.argv = [f"temporal_mcq {command}", *rest]
-    return int(module.main())
+    return int(entry())
 
 
 if __name__ == "__main__":
