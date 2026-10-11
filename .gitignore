@@ -1,0 +1,88 @@
+# ---------------------------------------------------------------------------
+# Source dataset and derived media — NOT redistributable in this repository.
+# See docs/dataset_provenance.md. Redistribution rights are unresolved, so raw
+# videos, the prepared video trees, full annotations, caption extracts and
+# contact sheets are all kept out of version control.
+# ---------------------------------------------------------------------------
+data/
+bridgedata2_temporal_mcq/*/videos/
+bridgedata2_temporal_mcq/manifests/
+bridgedata2_temporal_mcq/*/annotations.json
+bridgedata2_temporal_mcq/reports/
+# The dataset tree is a generated artifact. Its own README is a build byproduct
+# that names individual source clips; the root README documents the dataset.
+bridgedata2_temporal_mcq/README.md
+reports/contact_sheets/
+reports/*.log
+
+# Generated media of any kind
+*.mp4
+*.mov
+*.mkv
+*.avi
+*.webm
+*.m4v
+*.jpg
+*.jpeg
+*.png
+
+# ---------------------------------------------------------------------------
+# Credentials and local configuration
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.token
+*credentials*
+!docs/**/credentials*
+secrets/
+.claude/settings.local.json
+
+# ---------------------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------------------
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+
+# ---------------------------------------------------------------------------
+# Models, checkpoints and framework caches
+# ---------------------------------------------------------------------------
+*.safetensors
+*.ckpt
+*.pth
+*.pt
+*.onnx
+*.engine
+*.plan
+*.sqsh
+checkpoints/
+cache/
+.huggingface/
+.sqsh_cache/
+
+# ---------------------------------------------------------------------------
+# OS / editor
+# ---------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/

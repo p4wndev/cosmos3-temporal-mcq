@@ -1,0 +1,37 @@
+# Normalize line endings so the repository is stable across platforms.
+* text=auto eol=lf
+
+# Explicitly text.
+*.py    text diff=python
+*.md    text
+*.json  text
+*.jsonl text
+*.yaml  text
+*.yml   text
+*.toml  text
+*.cff   text
+*.txt   text
+Makefile text
+.gitignore text
+
+# Binary or generated — never diff these.
+*.mp4   binary
+*.mov   binary
+*.mkv   binary
+*.jpg   binary
+*.jpeg  binary
+*.png   binary
+*.safetensors binary
+*.ckpt  binary
+*.pth   binary
+*.onnx  binary
+
+# Keep the synthetic example out of language statistics so it does not distort
+# the repository's language breakdown.
+examples/sample_annotations.jsonl linguist-generated=true
+
+# NOTE: Git LFS is deliberately NOT configured.
+# The artifacts that would need it (videos, prepared video trees, contact
+# sheets) are not published, because redistribution rights are unresolved.
+# See docs/dataset_provenance.md. Do not add LFS as a workaround for unclear
+# rights.
