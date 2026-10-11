@@ -26,19 +26,26 @@ def test_citation_is_valid_yaml_with_required_fields(citation):
     assert citation["cff-version"] == "1.2.0"
 
 
-def test_authors_are_marked_as_placeholders(citation):
-    """The owner must replace these; a placeholder must be obvious."""
+def test_authors_are_populated_with_real_names(citation):
+    """The owner supplies real names; an unfilled placeholder must not ship."""
     assert citation["authors"], "at least one author entry is required"
     for author in citation["authors"]:
         joined = " ".join(str(v) for v in author.values()).upper()
-        assert "OWNER" in joined or "REPLACE" in joined, (
-            "author entries must remain obvious placeholders until the owner "
-            "supplies real names")
+        assert "REPLACE" not in joined and "OWNER" not in joined, (
+            f"author entry still looks like a placeholder: {author}")
+        assert author.get("family-names") or author.get("name"), (
+            "each author needs a family name or a name")
 
 
-def test_placeholders_are_present_for_owner_supplied_fields(citation):
+def test_owner_supplied_urls_are_concrete(citation):
+    """Repository URLs must be real, not placeholder text."""
     blob = CITATION.read_text(encoding="utf-8")
-    assert "OWNER" in blob, "repository URL placeholders must be marked"
+    assert "OWNER" not in blob and "REPLACE" not in blob, (
+        "unfilled placeholder text remains in CITATION.cff")
+    for key in ("repository-code", "url"):
+        value = citation.get(key, "")
+        assert value.startswith("https://"), f"{key} must be an absolute https URL"
+        assert "REPLACE" not in value
 
 
 def test_no_doi_or_publication_is_claimed(citation):

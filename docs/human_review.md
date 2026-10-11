@@ -1,10 +1,11 @@
 # Human review workflow
 
 **Status: not started.** No question in this dataset has been visually
-verified. Every record carries `visual_verification: pending`.
+verified. Every record carries `visual_verification: pending`, and the review
+summary reports **0 reviewed / 1052 unreviewed**.
 
-This document defines the workflow for changing that, and is explicit about
-what automated validation does and does not establish.
+This document explains what has and has not been checked, why contact sheets
+are not sufficient, and how to run the review interface.
 
 ## 1. What has and has not been checked
 
@@ -17,6 +18,10 @@ what automated validation does and does not establish.
 Automated validation proves the dataset is *well-formed*. It says nothing about
 whether an answer is *true*. Because the captions are synthetic and unverified,
 a question can be perfectly well-formed and still wrong.
+
+**The review tool never marks anything verified on its own.** There is no
+automatic path to a `verified` decision: a status is recorded only when a human
+submits one, and the summary keeps unreviewed questions in their own bucket.
 
 ## 2. Why contact sheets are not sufficient
 
@@ -38,15 +43,78 @@ scene — but they **cannot** verify temporal questions:
   sheet will look plausible while being misleading.
 
 **Therefore:** a question may only be marked `verified` after watching the
-source clip, not by inspecting a contact sheet alone.
+source clip, not by inspecting a contact sheet alone. The review interface plays
+the actual video for exactly this reason.
 
-## 3. Review procedure
+## 3. Launching the review interface
+
+Everything runs locally. Nothing is uploaded, and no model or GPU is involved.
+
+```bash
+# From the repository root, with the virtualenv created (see README §11):
+make review            # serves http://127.0.0.1:8765/ and opens a browser
+# or, equivalently:
+python -m temporal_mcq review-server --open
+```
+
+Useful options:
+
+```bash
+python -m temporal_mcq review-server --port 9000        # different port
+python -m temporal_mcq review-server --decisions /path/to/decisions.jsonl
+python -m temporal_mcq review-server --host 0.0.0.0     # NOT recommended
+```
+
+The server binds to `127.0.0.1` by default and should stay on localhost: it
+serves source videos to anyone who can reach the port.
+
+The interface shows, for the selected question:
+
+- the full question text and all four options, with the proposed answer in bold;
+- the question id, source-video id, split, and category;
+- the source video, playable, with seek and frame-stepping controls;
+- the evidence window in seconds and frames, labelled as coming from the
+  synthetic caption (it is a hint, **not** proof);
+- the caption claims, collapsed and explicitly labelled "synthetic — not
+  evidence";
+- the existing decision for that question, if any.
+
+A persistent banner states that the captions and proposed answers are
+unverified.
+
+### Controls
+
+| Control | Effect |
+|---|---|
+| Play/Pause, `-1s`, `+1s` | Transport |
+| `-1 frame`, `+1 frame` | Step one frame (1/fps seconds) |
+| Jump to evidence | Seek just before the evidence window start |
+| verified / incorrect / ambiguous / unverifiable | Record the decision immediately |
+| Corrected answer A–D | Supply the answer you believe is right |
+| Reason code | Optional structured reason |
+| Notes | Free text |
+| Reviewer | Your id or pseudonym (remembered locally in the browser) |
+| Decided at (seconds) | Optional: where in the clip you decided |
+| Save decision | Save without changing status (e.g. after editing notes) |
+| Skip / Prev / Next | Navigate without recording |
+
+Keyboard: `←`/`→` navigate, `space` play/pause, `1`–`4` record
+verified/incorrect/ambiguous/unverifiable.
+
+### Filters
+
+Filter by split, review status (defaults to **unreviewed**), category, or
+free-text search. The progress bar and header show how many questions are
+reviewed overall.
+
+## 4. Review procedure
 
 For each question:
 
-1. Open the source video (path in `video`, clip-relative to the source dataset).
-2. Watch the clip **in full** at least once, then re-watch the
-   `evidence_span_seconds` window.
+1. Watch the source clip **in full** at least once, then re-watch the
+   `evidence_span_seconds` window (use *Jump to evidence*).
+2. For a temporal question, confirm the ordering by stepping frames; do not
+   decide from a single frame.
 3. Decide the status:
 
 | Status | Meaning |
@@ -56,75 +124,120 @@ For each question:
 | `ambiguous` | The video supports more than one option, or the question is unclear |
 | `unverifiable` | The video is too low-resolution, occluded, or short to decide |
 
-4. Record a note explaining the decision, especially for anything other than
-   `verified`.
-5. Record the frame or timestamp that decided it, where useful.
+4. If you disagree with the proposed answer, set the corrected answer.
+5. Add a note, especially for anything other than `verified`.
 
-## 4. Decision file format
+`verified` and `incorrect` require a corrected answer to be set, so a decision
+always states which option you stand behind. `ambiguous` and `unverifiable`
+deliberately do not, because the point is that no single option is defensible.
 
-Review decisions are written to a **separate** file and never overwrite the
-original annotations. The original records keep their proposed answer and
-`visual_verification: pending`; the decision file is the authoritative record of
-what a human concluded.
+## 5. Decision storage
 
-Default path: `reports/review_decisions.jsonl` (excluded from version control).
+Decisions are written to **`reports/review_decisions.jsonl`** (excluded from
+version control, like the annotations themselves). The generated annotations are
+**never modified**: the original records keep their proposed answer and
+`visual_verification: pending`.
 
-One JSON object per line:
+The file is **append-only**. One JSON object per line:
 
 ```json
 {
   "id": "c8fdf2dd6922d3ce",
   "source_video_id": "episode_000015_clip000",
+  "split": "train",
+  "review_status": "verified",
   "proposed_answer": "B",
   "verified_answer": "B",
-  "review_status": "verified",
+  "notes": "The robot places the lemon into the pot at ~14s.",
+  "reason_code": "answer_correct",
   "reviewer": "<reviewer id>",
-  "reviewed_at": "YYYY-MM-DD",
+  "reviewed_at": "2026-10-11T16:45:17Z",
   "decided_at_seconds": 14.5,
-  "notes": "The robot does place the lemon into the pot at ~14s."
+  "annotation_fingerprint": "…",
+  "dataset_fingerprint": "…",
+  "revision": 1,
+  "supersedes": null
 }
 ```
 
-Field contract:
+| Field | Notes |
+|---|---|
+| `id` | Join key; must match a question id exactly |
+| `source_video_id`, `split` | Taken from the annotation, not from the client |
+| `review_status` | One of `verified`, `incorrect`, `ambiguous`, `unverifiable` |
+| `proposed_answer` | Taken from the annotation, not from the client |
+| `verified_answer` | Required for `verified` and `incorrect`; `null` otherwise |
+| `reviewed_at` | UTC, second precision |
+| `decided_at_seconds` | Optional position in the clip |
+| `annotation_fingerprint` | Hash of the fields judged, for staleness detection |
+| `dataset_fingerprint` | Hash of the whole annotation set at review time |
+| `revision` | 1 for the first decision, incremented on each edit |
+| `supersedes` | Timestamp of the decision this one replaces |
 
-| Field | Required | Notes |
-|---|---|---|
-| `id` | yes | Must match a question `id` exactly; this is the join key |
-| `source_video_id` | yes | For audit convenience |
-| `proposed_answer` | yes | The answer as generated, for comparison |
-| `verified_answer` | when status is `verified` or `incorrect` | The human's answer |
-| `review_status` | yes | One of `verified`, `incorrect`, `ambiguous`, `unverifiable` |
-| `reviewer` | yes | Who decided |
-| `reviewed_at` | yes | ISO date |
-| `decided_at_seconds` | no | Where in the clip the decision was made |
-| `notes` | recommended | Especially for non-`verified` statuses |
+### Duplicate decisions and edits
 
-Stable question IDs are content-addressed (`sha256` of clip id, category,
-question, and correct answer, truncated to 16 hex characters). They do **not**
-change when options are reshuffled, so a decision stays attached to its
-question.
+A second decision for the same question is written as a **new revision**; the
+earlier one stays in the file. Reading collapses the file to the latest revision
+per question, and reports the count of superseded revisions. **Nothing is ever
+silently discarded.**
 
-## 5. How decisions are applied
+### Stale decisions
 
-The decision file is an overlay, applied at load time:
+If the annotation content changes after review — a different question, options,
+or answer — the stored `annotation_fingerprint` no longer matches. Such
+decisions are reported as **stale** and listed in the summary rather than
+silently applied.
 
-- `verified` → the question may be used for evaluation with its verified answer.
-- `incorrect` → the question is **excluded**, unless the human's
-  `verified_answer` is used, in which case it is treated as `verified`.
-- `ambiguous` → **excluded** from accuracy scoring.
-- `unverifiable` → **excluded** from accuracy scoring.
-- no decision → **excluded** from any reported accuracy, and counted as
-  unverified so the shortfall is visible.
+### Rejected decisions
 
-Nothing is applied automatically to the annotations on disk. Any future
-evaluation must report how many questions were verified, excluded, and still
-pending, so a partial review cannot be mistaken for a complete one.
+A decision is refused, and nothing is written, when:
 
-## 6. Applying decisions
+- the question id is not in the annotation set;
+- `verified_answer` or `proposed_answer` is not one of `A`–`D`;
+- `verified`/`incorrect` is chosen without an answer;
+- the status or reason code is not recognised;
+- no reviewer is given.
 
-There is no automated reviewer. A small loader that applies the overlay is a
-reasonable next step and is listed in the roadmap; until then, treat the
-decision file as a plain record and apply it explicitly.
+## 6. Generating the summary
+
+```bash
+make review-summary
+# or:
+python -m temporal_mcq review-summary
+python -m temporal_mcq review-summary --json          # machine-readable
+python -m temporal_mcq review-summary --out reports/review_summary.md
+```
+
+The summary reports:
+
+- total questions, reviewed, unreviewed;
+- counts and percentages for each status;
+- the same breakdown by split and by category;
+- corrected-answer count;
+- superseded decisions retained;
+- stale decisions, unknown ids, malformed lines, video mismatches;
+- questions whose source video could not be found (these cannot be reviewed
+  visually).
+
+Until the review is complete, every accuracy figure is a partial number and must
+be reported with the verified / excluded / pending breakdown. See
+[`evaluation_protocol.md`](evaluation_protocol.md).
+
+## 7. Applying decisions
+
+Decisions are an overlay, applied at load time. They are not written into the
+annotations.
+
+- `verified` → usable for evaluation with the verified answer.
+- `incorrect` → excluded, unless the corrected answer is used, in which case
+  treat it as `verified`.
+- `ambiguous`, `unverifiable` → excluded from accuracy scoring.
+- no decision → excluded from any reported accuracy, and counted as unreviewed
+  so the shortfall stays visible.
+
+A loader that materialises the overlay into an evaluation set is a reasonable
+next step and is listed in the roadmap.
 
 Do **not** mark a question `verified` without having watched the clip.
-Do **not** mark a question `verified` because the automated validation passed.
+Do **not** mark a question `verified` because automated validation passed.
+Do **not** use test-split review outcomes to tune prompts or hyperparameters.

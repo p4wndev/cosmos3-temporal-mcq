@@ -218,13 +218,16 @@ duplicates, and answer/category distribution.
 ## 10. Human verification status and limitations
 
 **No question has been visually verified.** Every record carries
-`visual_verification: pending`. Contact sheets exist under
+`visual_verification: pending`, and `make review-summary` reports
+**0 reviewed / 1,052 unreviewed**. Contact sheets exist under
 `reports/contact_sheets/` for manual inspection but are **not sufficient** to
 confirm temporal questions — three still frames cannot show ordering or subtle
 state change. Verification requires watching the clip.
 
-The full workflow, status vocabulary (`verified` / `incorrect` / `ambiguous` /
-`unverifiable`), and the separate non-destructive decision file are specified in
+A local review interface is implemented and ready to use (`make review`); see
+§13 for how to run it. The status vocabulary (`verified` / `incorrect` /
+`ambiguous` / `unverifiable`), the append-only decision file, and the staleness
+and duplicate rules are specified in
 [`docs/human_review.md`](docs/human_review.md).
 
 Principal limitations (full list in [`docs/limitations.md`](docs/limitations.md)):
@@ -285,14 +288,39 @@ Validating an already-prepared dataset needs neither network nor the source
 videos' bytes beyond what is local:
 
 ```bash
-make test            # 85 CPU-only unit tests
+make test            # 211 CPU-only unit tests
 make validate        # 0 hard failures expected
 ```
 
 `make validate` exits non-zero if any hard check fails, and always writes
 `bridgedata2_temporal_mcq/reports/validation_report.json`.
 
-## 13. Repository structure
+## 13. Human visual verification (local, in progress)
+
+Verification runs against the **actual videos**, not the captions. It is a local
+web interface; nothing is uploaded and no model or GPU is involved.
+
+```bash
+make review           # serve http://127.0.0.1:8765/ and open a browser
+make review-summary   # review status summary
+```
+
+The interface plays the source clip with seek and frame-step controls, shows the
+question, options, proposed answer, and the evidence window, and records one of
+`verified` / `incorrect` / `ambiguous` / `unverifiable` plus an optional
+corrected answer, reason code and notes.
+
+Decisions are stored in an **append-only** file (`reports/review_decisions.jsonl`)
+and never modify the annotations. An edit becomes a new revision; earlier
+revisions are retained. Decisions are bound to an annotation content hash, so a
+decision made against changed content is reported as **stale** rather than
+silently applied.
+
+**Current status: 0 of 1,052 questions verified.** The summary reports
+unreviewed questions in their own bucket, and no code path can mark a question
+verified automatically. See [`docs/human_review.md`](docs/human_review.md).
+
+## 14. Repository structure
 
 ```text
 cosmos3-temporal-mcq/
@@ -310,14 +338,16 @@ cosmos3-temporal-mcq/
 │   ├── dataset_provenance.md   # source, license, unresolved rights
 │   ├── annotation_guidelines.md
 │   ├── evaluation_protocol.md  # planned zero-shot vs LoRA comparison
-│   ├── human_review.md         # review workflow (not started)
+│   ├── human_review.md         # review workflow + interface instructions
 │   └── limitations.md
 ├── src/temporal_mcq/           # the implementation
 │   ├── paths.py  cli.py  download.py  audit.py
 │   ├── generate.py  build.py  validate.py
 │   ├── reports.py  sheets.py  scoring.py
+│   ├── review.py               # decision store, integrity, accounting
+│   └── review_server.py        # local review interface (stdlib HTTP + ranges)
 ├── scripts/                    # thin CLI wrappers (backwards compatible)
-├── tests/                      # 85 CPU-only unit tests
+├── tests/                      # 211 CPU-only unit tests
 ├── examples/
 │   └── sample_annotations.jsonl   # hand-written, synthetic
 └── reports/
@@ -325,24 +355,27 @@ cosmos3-temporal-mcq/
 ```
 
 Not committed (see `.gitignore`): `data/raw/`, prepared video trees, full
-annotations, caption extracts, contact sheets, logs, virtualenvs, model
-checkpoints. Rationale in [`docs/dataset_provenance.md`](docs/dataset_provenance.md).
+annotations, caption extracts, contact sheets, review decisions, logs,
+virtualenvs, model checkpoints. Rationale in
+[`docs/dataset_provenance.md`](docs/dataset_provenance.md).
 
-## 14. Roadmap
+## 15. Roadmap
 
 - [x] Download and audit the source dataset
 - [x] Generate MCQ candidates with an explicit rejection policy
 - [x] Source-video-level split with leakage prevention
 - [x] Emit and validate `tao-vl-reason-v1.0` task-aware annotations
 - [x] CPU-only validation entry point and unit tests
-- [ ] **Human visual verification** of the generated answers
+- [x] **Review tooling**: local verification interface, append-only decision
+      store, integrity checks and summary reporting
+- [ ] **Human visual verification** of the generated answers (0 / 1,052 done)
 - [ ] Apply review decisions as a non-destructive overlay
 - [ ] Cosmos 3 Nano **zero-shot** evaluation on the verified test split
 - [ ] **LoRA fine-tune** via TAO Cosmos-RL
 - [ ] Zero-shot vs LoRA comparison with paired uncertainty
 - [ ] Publish the verified dataset subject to a licensing review
 
-## 15. Citation and license
+## 16. Citation and license
 
 Citation metadata is in [`CITATION.cff`](CITATION.cff). It carries placeholders
 (`OWNER`, repository URL) that the owner must fill in; no DOI or publication is

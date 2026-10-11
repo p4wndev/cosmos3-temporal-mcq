@@ -15,7 +15,7 @@ endif
 
 .DEFAULT_GOAL := help
 .PHONY: help venv install test validate validate-full lint audit reports sheets \
-        download generate build clean-check
+        download generate build clean-check review review-summary
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -67,6 +67,16 @@ reports: ## Write the dataset summary, quality and split reports
 
 sheets: ## Build contact sheets for human visual review (writes JPEGs)
 	$(PYTHON) -m temporal_mcq sheets
+
+# ---------------------------------------------------------------------------
+# Human visual verification (local only; nothing is uploaded)
+# ---------------------------------------------------------------------------
+
+review: ## Serve the local review interface at http://127.0.0.1:8765/
+	$(PYTHON) -m temporal_mcq review-server --open
+
+review-summary: ## Print the review status summary
+	$(PYTHON) -m temporal_mcq review-summary
 
 # ---------------------------------------------------------------------------
 # Hygiene
