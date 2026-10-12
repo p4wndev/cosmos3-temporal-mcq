@@ -12,12 +12,18 @@ dataset card states the captions "may contain errors, omissions, hallucinated
 details, or imprecise descriptions of object identity, motion, and task
 intent", and that they should not be treated as verified ground truth.
 
-Every record therefore carries `visual_verification: pending`. No question has
-been checked against the video by a human.
+The captions were used only to *propose* questions. Every question was then
+reviewed against the source video by the dataset owner; the released dataset
+contains only the 644 questions whose effective decision is `verified`, with
+`visual_verification: verified` in the released records (the original source
+annotations keep `visual_verification: pending`). The review confirmed the
+**answer**, not full caption accuracy, and the record does not preserve detailed
+per-decision visual evidence — see
+[`human_review.md`](human_review.md) §5.
 
-**Consequence:** accuracy numbers computed on this dataset are only meaningful
-after human review, and must be reported with the verified / excluded / pending
-breakdown. See [`human_review.md`](human_review.md).
+**Consequence:** report accuracy with the verified / excluded breakdown, and do
+not present caption-derived question text as verified ground truth. See
+[`human_review.md`](human_review.md).
 
 ## 2. Question yield is limited by caption structure
 
@@ -91,17 +97,19 @@ answerable.
 
 ## 8. Small dataset
 
-1,052 questions across 641 videos, split 844 / 105 / 103. Per-category counts in
-val and test are in the tens. Differences between models on this dataset may not
-be statistically meaningful; see [`evaluation_protocol.md`](evaluation_protocol.md)
-§6.
+The released dataset is **644 verified questions across 476 videos**, split
+**523 / 57 / 64** (train / validation / test); 1,052 candidate questions were
+generated and 408 excluded. Per-category counts in validation and test are in
+the tens. Differences between models may not be statistically meaningful; see
+[`evaluation_protocol.md`](evaluation_protocol.md) §6.
 
 ## 9. Redistribution rights are unresolved
 
 The source dataset's OpenMDW 1.1 license does not automatically extend to the
 derived annotations, the underlying videos, or this code. No root license has
 been chosen. Raw videos, prepared video trees, full annotations, caption
-extracts and contact sheets are excluded from version control. See
+extracts and contact sheets are excluded from version control, and the published
+bundle ships in `reference` media mode (no video bytes) for this reason. See
 [`dataset_provenance.md`](dataset_provenance.md).
 
 ## 10. Not covered by automated validation

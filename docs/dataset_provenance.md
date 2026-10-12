@@ -1,150 +1,112 @@
-# Dataset provenance and licensing
+# Dataset provenance
 
-This document records where the data came from, what this project generated,
-and which rights remain unresolved. **Read this before publishing or
-redistributing anything from this repository.**
+Where the data came from, how each example maps to its source video, and what is
+derived versus upstream. Read this before redistributing anything.
 
-## 1. Source dataset
+## 1. Upstream source
 
 | Field | Value |
 |---|---|
-| Name | BridgeData2 Subset Synthetic Captions |
-| Repository | `nvidia/BridgeData2-Subset-Synthetic-Captions` |
-| URL | https://huggingface.co/datasets/nvidia/BridgeData2-Subset-Synthetic-Captions |
-| Owner / maintainer | NVIDIA Corporation |
+| Dataset | `nvidia/BridgeData2-Subset-Synthetic-Captions` |
+| URL | <https://huggingface.co/datasets/nvidia/BridgeData2-Subset-Synthetic-Captions> |
+| Owner | NVIDIA Corporation |
 | Revision used | `e841d88db9f36caa4c805c31509712676c0fda0e` |
 | Gated | No — public, no token required |
-| Declared license | `openmdw-license-agreement-version-1.1` (OpenMDW 1.1) |
-| License link | https://openmdw.ai/license/ |
-| Upstream data | BridgeData V2, https://rail-berkeley.github.io/bridgedata/ |
+| Declared license | `LicenseRef-OpenMDW-1.1` (OpenMDW 1.1) |
+| Underlying data | BridgeData V2, <https://rail-berkeley.github.io/bridgedata/> |
 
-### Upstream attribution
+The upstream captions are **synthetic** (machine-generated, not human-annotated)
+and the upstream card states they may contain errors, omissions, or hallucinated
+detail. They were used only to *propose* questions; the answers were then checked
+against the source video (see [`human_review.md`](human_review.md)).
 
-The dataset card asks users to cite the original BridgeData V2 paper:
+### Attribution
 
-> Walke, Homer, et al. "BridgeData V2: A Dataset for Robot Learning at Scale."
+If published, use of the source requires naming the upstream dataset and citing
+the BridgeData V2 paper (see `CITATION.cff`):
+
+> Walke, H., et al. "BridgeData V2: A Dataset for Robot Learning at Scale."
 > *Conference on Robot Learning (CoRL)*, 2023. arXiv:2308.12952
 
-That citation is reproduced in the root `CITATION.cff` under `references`.
+## 2. Deterministic example → video mapping
 
-### Synthetic caption provenance
+Each record carries two authoritative identifiers:
 
-The captions, including the structured `caption_json` this project consumes,
-are **synthetic**: they were produced by an automated captioning process, not by
-human annotation. The dataset card states directly that the captions "are
-synthetic natural-language descriptions of the video clips and should be
-inspected before use in high-precision evaluation", and lists among the known
-risks that captions "may contain errors, omissions, hallucinated details, or
-imprecise descriptions of object identity, motion, and task intent".
+- `source_video_id` — the upstream clip `uuid` (e.g. `episode_000015_clip000`).
+- `video_id` — `source_video_id` + `.mp4`, the canonical media key required by
+  the TAO task-aware schema.
 
-**Consequence for this project:** every generated question is a
-*caption-grounded candidate*, not verified ground truth. See
-[`human_review.md`](human_review.md) and [`limitations.md`](limitations.md).
+The mapping is by identifier only. It is **never** inferred from filename order,
+name similarity, or question text:
 
-## 2. What this project produced
-
-| Artifact | Status | Redistribution |
-|---|---|---|
-| `src/`, `scripts/`, `tests/`, `docs/`, `configs/` | Original work of this project | Rights undetermined — see §3 |
-| `bridgedata2_temporal_mcq/**/annotations.json` | Derived (generated from source captions) | **Not published** |
-| `bridgedata2_temporal_mcq/manifests/*.jsonl` | Derived (per-question metadata, caption claims) | **Not published** |
-| `bridgedata2_temporal_mcq/reports/*` | Aggregate statistics + rejected-candidate log | Aggregate only |
-| `reports/dataset_audit.md` | Aggregate description of the source dataset | Aggregate only |
-| `reports/contact_sheets/*.jpg` | Frames extracted from source videos | **Not published** |
-| `releases/**` | Materialized verified dataset (derived annotations + review overlay) | **Not published** |
-| `dist/**` | Assembled single-repository bundle (release + mapping + TAO envelopes + bootstrap scripts, optionally videos) | **Not published** |
-| `data/raw/bridgedata2/**` | Verbatim copy of the source dataset | **Not published** |
-| `examples/sample_annotations.jsonl` | Hand-written, clearly synthetic | Published |
-
-"Not published" means excluded by `.gitignore` and not redistributed in this
-repository. The artifacts still exist locally for the owner's own use.
-
-### On the generated annotations
-
-The questions are constructed from the source captions and the video clips'
-own metadata. They are *derived* from the source dataset: each record quotes
-caption text (`caption_claims`) and points at a source video. Publishing the
-full annotation set would therefore reproduce source-derived material.
-
-Whether OpenMDW 1.1 permits redistributing these derived annotations, and under
-what conditions, has **not been determined**. The conservative default taken
-here is to publish the *code, the schema documentation, and aggregate
-statistics*, and to keep the annotations and media local.
-
-### On the materialized release
-
-`releases/<version>/` is the earliest artifact that carries human-verified
-answers. It is built from the source-derived annotations plus the review
-decisions, and each record still references a source clip by `video_id` and
-reproduces caption-derived question text — so it inherits the same unresolved
-OpenMDW 1.1 redistribution question as the annotations. It is therefore
-gitignored and kept local, like the annotations. Whether it may be published is
-one of the open questions in §3.
-
-### On the videos
-
-The underlying BridgeData V2 videos are real-world robot-manipulation
-recordings. Neither this project nor the source subset grants rights to
-redistribute them. **No video file, and no extracted frame, is published.**
-
-### On the single-repository bundle
-
-`dist/<version>/` is the assembled, downloadable repository (see README §15).
-It contains the release's `data/` and `tao/` payloads, the inclusion/exclusion
-manifests, a `video_manifest.jsonl` describing every required source video by
-identifier, path, size, and SHA-256, and cluster scripts. It inherits the same
-OpenMDW 1.1 redistribution question as the release.
-
-Because video redistribution is **not cleared**, the shipping bundle is built in
-**`reference` mode**: it carries no video bytes, only the manifest and the
-`download_videos.py` bootstrap that re-acquires the exact pinned upstream clips
-on the cluster. An **`embedded`** build (videos copied under `videos/`) exists as
-a local build option and must not be published until the rights question in §3
-is resolved and the videos' redistribution is expressly permitted.
-
-## 3. Unresolved questions
-
-These are genuinely open and must be answered by the repository owner before
-publication:
-
-1. **Does the OpenMDW 1.1 license extend to derived annotations?** The license
-   covers the source dataset. Whether model-generated questions about those
-   clips are a "derivative work", and what obligations that carries, is a legal
-   question this document does not settle.
-2. **What license should govern this repository's code?** No license has been
-   chosen. `LICENSE` currently carries an explicit "no license granted yet"
-   notice rather than a fabricated or defaulted license.
-3. **May the aggregate statistics be published?** They are believed to be
-   factual descriptions of the data (counts, distributions) rather than
-   expressive content, but this has not been legally reviewed.
-4. **Do the example fixtures reproduce source material?**
-   `examples/sample_annotations.jsonl` was written by hand for documentation and
-   uses invented objects and questions. It is intended to contain no source
-   content. It should be re-checked if the generation templates change.
-5. **May the source videos be redistributed?** The bundle's `embedded` mode
-   would ship the 476 required clips. That is gated on this question. Until it
-   is answered, only the `reference`-mode bundle (annotations + manifest +
-   bootstrap downloader) is eligible for publication.
-
-## 4. Attribution requirements
-
-If this repository is published, it must:
-
-- name the source dataset and link to its Hugging Face page;
-- reproduce the BridgeData V2 citation (already in `CITATION.cff`);
-- state that captions are synthetic and unverified;
-- state that the answers are caption-grounded candidates pending human review;
-- avoid implying endorsement by NVIDIA or the BridgeData V2 authors.
-
-## 5. Reproducing the source download
-
-```bash
-# Public and ungated: no token is required.
-python -m temporal_mcq download
-
-# HF_TOKEN is read from the environment only if it is already set.
-# Its value is never printed, logged, or written to disk.
+```
+record.source_video_id  ==  upstream manifest uuid
+record.video_id         ==  source_video_id + ".mp4"
+upstream path           ==  sft_dataset_bridge/{train|val}/videos/{source_video_id}.mp4
 ```
 
-The download lands in `data/raw/bridgedata2/` and is excluded from version
-control. Nothing in the source dataset is modified in place.
+`manifests/video_manifest.jsonl` lists every required clip with its
+`source_video_id`, `video_id`, split, upstream path, `size_bytes`, and `sha256`.
+`scripts/download_videos.py` resolves clips through this manifest and verifies
+size and checksum, so a mis-mapped or corrupt clip is a hard error, never a
+silent skip. Coverage: **476 / 476** required clips mapped, 0 unmapped.
+
+## 3. Annotation lineage and split policy
+
+`data/*.jsonl` (released records) and `tao/*/annotations.json` (TAO envelopes)
+are derived from the upstream structured captions:
+
+```
+upstream caption_json  ->  candidate questions  ->  source-video split
+                       ->  human review  ->  materialized release  ->  bundle
+```
+
+- Only questions whose latest effective decision is `verified` are released
+  (644 of 1,052).
+- The answer is the human-confirmed answer, or the correction where recorded.
+- Splits are inherited unchanged from a **source-video-level** split: no clip
+  spans two splits, and the upstream `val/` split is preserved and never merged.
+- The test split is frozen.
+
+## 4. Checksums and fingerprints
+
+| Artifact | Value |
+|---|---|
+| Bundle version | `v0.2.0-cosmos3-lora` |
+| Bundle fingerprint | `fece449f0d04c00b976fa2f58cd15fc8d436d1506ce8a902097544432285f57e` |
+| Release version | `v0.1.0-human-reviewed` |
+| Release fingerprint | `1b50354d876001971f32b303598f3ae2d8f2ad0152029f22334fc3d4d0c75bdf` |
+| Canonical annotation input SHA-256 | `39a3f91a1832271e1679ef296c58a44e4d2e7fe31425e0398d6fd9fa3628c8ef` |
+| Review-decision input SHA-256 | `f21aa6570656828d6be3fe2698021ef807a69741016381dc4914ce1ec2775741` |
+
+The bundle fingerprint hashes `data/`, `tao/`, and `manifests/`, so it is stable
+across media modes (embedded vs reference). Rebuilding from unchanged inputs
+reproduces byte-identical files and the same fingerprint. Per-file SHA-256 values
+are recorded in `manifest.json`.
+
+## 5. What is derived, redistributed, and upstream
+
+| Artifact | Kind | Redistributed here? |
+|---|---|---|
+| `data/*.jsonl`, `tao/*/annotations.json` | derived annotations | Yes |
+| `manifests/*.jsonl`, `manifest.json`, `provenance.json` | derived metadata | Yes |
+| `scripts/*` | original tooling | Yes |
+| Source videos (`sft_dataset_bridge/**/*.mp4`) | upstream media | **No** — fetched by the downloader |
+| Upstream captions | upstream text | **No** |
+| `releases/**`, `dist/**` bundles, contact sheets | local build artifacts | No |
+
+The published bundle uses media mode **`reference`**: it contains no video bytes.
+It is therefore **not self-contained** — the videos must be fetched from the
+pinned upstream revision with `scripts/download_videos.py`.
+
+## 6. Open questions before publication
+
+1. **Does OpenMDW 1.1 extend to the derived annotations?** Not determined.
+2. **What license governs this code and the annotations?** None chosen;
+   `LICENSE` states that no license is granted yet.
+3. **May the source videos be redistributed?** Not established. This gates any
+   `embedded` bundle; until resolved, only a `reference`-mode bundle (annotations
+   + manifest + downloader) is eligible for publication.
+
+No license field is asserted in the dataset card or README front matter because
+these rights are unresolved.

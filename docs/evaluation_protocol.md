@@ -10,20 +10,18 @@ result is reproducible.
 
 ## 1. Prerequisite: verified examples
 
-Evaluation runs on **verified** questions only — those with
-`review_status: verified` in the effective review decision (see
-[`human_review.md`](human_review.md)).
+Evaluation runs on **verified** questions only — those whose effective review
+decision is `verified` (see [`human_review.md`](human_review.md)).
 
-The recommended source of scored questions is the **materialized verified
-release** (`releases/<version>/`, see [`human_review.md`](human_review.md) §8),
-which already contains exactly the effective `verified` questions with their
-confirmed answers. Its test split is the frozen evaluation set.
+The source of scored questions is the **released dataset** — the bundle's
+`data/*.jsonl` (or the materialized release, see
+[`human_review.md`](human_review.md)), which contains exactly the effective
+`verified` questions with their confirmed (or corrected) answers. Its test split
+is the frozen evaluation set.
 
 The following are excluded from accuracy, and their counts must be reported:
 
-- questions with no review decision;
-- questions marked `ambiguous` or `unverifiable`;
-- questions marked `incorrect` unless the human's `verified_answer` is used.
+- the 353 `ambiguous` and 55 `incorrect` questions, which are not in the release.
 
 Any accuracy figure must be reported with the verified / excluded breakdown
 alongside it, never as a bare number.
@@ -140,7 +138,7 @@ When results exist, report per arm:
 Arm:            <zero-shot | LoRA>
 Model:          <id> @ <revision>
 Checkpoint:     <path or step>
-Verified n:     <count>   (pending: <n>, ambiguous: <n>, unverifiable: <n>)
+Verified n:     <count>   (ambiguous: <n>, incorrect: <n>, unreviewed: <n>)
 Overall acc:    <x>/<n> = <p>  [<Wilson CI>]
   action_object_understanding: <x>/<n>
   temporal_order_state_change: <x>/<n>

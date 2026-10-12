@@ -445,6 +445,41 @@ def test_bundle_writes_cluster_scripts(world):
     assert (out / "DATASET_CARD.md").is_file()
 
 
+def test_bundle_readme_has_hub_front_matter(world):
+    """The published card must carry valid Hugging Face YAML front matter."""
+    import re
+
+    _, ref = build(world, "b_fm_ref", media_mode="reference")
+    text = (ref / "README.md").read_text()
+    m = re.match(r"^---\n(.*?)\n---\n", text, re.S)
+    assert m, "bundle README.md is missing YAML front matter"
+    front = m.group(1)
+    for key in ("configs", "task_categories", "size_categories", "pretty_name"):
+        assert key in front
+    # no license is asserted while redistribution rights are unresolved
+    assert "license" not in front
+    # the data-file config must point at the real splits
+    assert "data/train.jsonl" in front and "data/validation.jsonl" in front
+
+
+def test_bundle_readme_reference_mode_orders_binding_before_verify(world):
+    """Reference-mode instructions must bind videos before the media check."""
+    _, ref = build(world, "b_fm_ref2", media_mode="reference")
+    text = (ref / "README.md").read_text()
+    usage = text.split("## Cluster usage", 1)[1]
+    assert "download_videos.py" in usage
+    assert usage.index("download_videos.py") < usage.index("verify_dataset.py")
+    assert "Videos are **not included**" in text
+
+
+def test_bundle_readme_embedded_mode_has_no_bind_step(world):
+    _, emb = build(world, "b_fm_emb", media_mode="embedded")
+    usage = (emb / "README.md").read_text().split("## Cluster usage", 1)[1]
+    # embedded bundles already carry the media, so the usage has no bind step
+    assert "download_videos.py" not in usage
+    assert "self-contained" in usage or "self-contained" in (emb / "README.md").read_text()
+
+
 def test_passthrough_preserves_answers_and_splits(world):
     _, out = build(world)
     rows = []

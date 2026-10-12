@@ -1100,11 +1100,44 @@ def _render_card(manifest: dict, vm: list[dict], media_mode: str) -> str:
         "Videos are **not included**. Run `python scripts/download_videos.py --root .` "
         "to fetch the pinned upstream videos and bind them under `videos/`. That step "
         "needs network access and access to the upstream dataset.")
-    return f"""# cosmos3-temporal-mcq — Cosmos 3 LoRA dataset bundle {manifest['bundle_version']}
+    bind_step = (
+        "" if embedded else
+        "# bind the pinned upstream videos (reference mode)\n"
+        "python ./datasets/cosmos3-temporal-mcq/scripts/download_videos.py \\\n"
+        "  --root ./datasets/cosmos3-temporal-mcq\n")
+    front_matter = f"""---
+language:
+  - en
+task_categories:
+  - video-question-answering
+  - video-text-to-text
+task_ids:
+  - multiple-choice-qa
+pretty_name: "Cosmos 3 Temporal MCQ (BridgeData2, human-verified)"
+size_categories:
+  - n<1K
+tags:
+  - robotics
+  - temporal-reasoning
+  - video
+  - multiple-choice
+  - cosmos
+configs:
+  - config_name: default
+    data_files:
+      - split: train
+        path: data/train.jsonl
+      - split: validation
+        path: data/validation.jsonl
+      - split: test
+        path: data/test.jsonl
+---
+"""
+    return front_matter + f"""# cosmos3-temporal-mcq — dataset bundle {manifest['bundle_version']}
 
-Single-repository release for the intended **Cosmos 3 Nano LoRA** temporal
-reasoning experiment. Download the whole repository at one immutable revision
-and you have every authorized input the training pipeline needs.
+Human-verified multiple-choice video QA for temporal reasoning in robot
+manipulation, for **Cosmos 3** (Nano) video-reasoning and LoRA experiments with
+the NVIDIA TAO **Cosmos-RL** recipe.
 
 - **Bundle version:** `{manifest['bundle_version']}`
 - **Bundle fingerprint:** `{manifest['bundle_fingerprint']}`
@@ -1160,9 +1193,9 @@ size, and SHA-256.
 hf download p4wndev/cosmos3-temporal-mcq --repo-type dataset \\
   --revision <IMMUTABLE_REVISION> --local-dir ./datasets/cosmos3-temporal-mcq
 
-python ./datasets/cosmos3-temporal-mcq/scripts/verify_dataset.py \\
-  --root ./datasets/cosmos3-temporal-mcq
-{'# reference mode: bind the upstream videos first\npython ./datasets/cosmos3-temporal-mcq/scripts/download_videos.py \\\n  --root ./datasets/cosmos3-temporal-mcq\n' if not embedded else ''}
+{bind_step}python ./datasets/cosmos3-temporal-mcq/scripts/verify_dataset.py \\
+  --root ./datasets/cosmos3-temporal-mcq{'' if not embedded else ' --require-videos'}
+
 python ./datasets/cosmos3-temporal-mcq/scripts/prepare_training_data.py \\
   --root ./datasets/cosmos3-temporal-mcq \\
   --output ./datasets/cosmos3-temporal-mcq-prepared
@@ -1174,6 +1207,8 @@ inputs (per-split `annotations.json` + bound media roots) and prints the exact
 
 ## Limitations
 
+- Structural + TAO annotation-schema validation only; end-to-end Cosmos 3
+  training has **not** been run and is not guaranteed by annotation validation.
 - Questions are caption-derived; the human review confirmed the **answer**, not
   full caption accuracy.
 - {counts['examples']} verified questions is small; report counts with percentages.
