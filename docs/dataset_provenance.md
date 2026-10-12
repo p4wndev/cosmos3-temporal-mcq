@@ -51,6 +51,7 @@ imprecise descriptions of object identity, motion, and task intent".
 | `bridgedata2_temporal_mcq/reports/*` | Aggregate statistics + rejected-candidate log | Aggregate only |
 | `reports/dataset_audit.md` | Aggregate description of the source dataset | Aggregate only |
 | `reports/contact_sheets/*.jpg` | Frames extracted from source videos | **Not published** |
+| `releases/**` | Materialized verified dataset (derived annotations + review overlay) | **Not published** |
 | `data/raw/bridgedata2/**` | Verbatim copy of the source dataset | **Not published** |
 | `examples/sample_annotations.jsonl` | Hand-written, clearly synthetic | Published |
 
@@ -68,6 +69,16 @@ Whether OpenMDW 1.1 permits redistributing these derived annotations, and under
 what conditions, has **not been determined**. The conservative default taken
 here is to publish the *code, the schema documentation, and aggregate
 statistics*, and to keep the annotations and media local.
+
+### On the materialized release
+
+`releases/<version>/` is the earliest artifact that carries human-verified
+answers. It is built from the source-derived annotations plus the review
+decisions, and each record still references a source clip by `video_id` and
+reproduces caption-derived question text — so it inherits the same unresolved
+OpenMDW 1.1 redistribution question as the annotations. It is therefore
+gitignored and kept local, like the annotations. Whether it may be published is
+one of the open questions in §3.
 
 ### On the videos
 

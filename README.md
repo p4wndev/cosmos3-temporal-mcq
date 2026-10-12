@@ -12,10 +12,10 @@ consumes. It is the foundation for a planned comparison of Cosmos 3 Nano
 **zero-shot** against a **LoRA fine-tune**.
 
 > **Status: dataset preparation complete and structurally validated. Human
-> visual review has been completed and recorded, and the review records have
-> been audited. No model has been trained, benchmarked, or evaluated. A final
-> verified dataset release has not been materialized, and nothing has been
-> published to Hugging Face.**
+> visual review has been completed and confirmed, the review records have been
+> audited, and a versioned **human-verified dataset release** has been
+> materialized locally (644 questions). No model has been trained, benchmarked,
+> or evaluated, and nothing has been published to Hugging Face.**
 
 ---
 
@@ -251,8 +251,9 @@ These four states are distinct and must not be conflated:
   is a limitation of the *record*, not a finding that individual decisions are
   wrong — the reviewer recorded completing the review by watching the clips.
   Consistency checks alone do not prove visual correctness.
-- **A final verified dataset release** — **not created.** Materializing the
-  reviewed decisions into a versioned dataset is a separate, future step.
+- **A final verified dataset release** — **created locally.** See §14. The
+  release is a versioned, reproducible local artifact; publishing it is a
+  separate, future step.
 
 The audit is recorded in [`reports/review_audit.md`](reports/review_audit.md)
 and reproducible with `python scripts/audit_review_decisions.py`. The review
@@ -373,13 +374,74 @@ reports the reviewed rate as the complement of the unreviewed rate.
 Review is **complete**: all 1,052 questions have a recorded decision, with 644
 effective `verified`, 55 `incorrect`, 353 `ambiguous`, 0 `unverifiable`, and 57
 corrected answers (see §10). The recorded decisions are consistent and
-reproducible; the audit's caveat is that the records do not independently
-reconstruct per-decision visual evidence. The final **verified dataset has not
-been materialized** — that, and any publication, are separate future steps. See
+reproducible.
+
+**The verified dataset has been materialized** as a versioned local release —
+see §14. Materialization and Hugging Face publication are separate steps: the
+release exists locally and has **not** been uploaded. See
 [`docs/human_review.md`](docs/human_review.md) and
 [`reports/review_audit.md`](reports/review_audit.md).
 
-## 14. Repository structure
+## 14. Verified dataset release (materialized, local)
+
+The confirmed human review decisions are materialized into a **versioned,
+reproducible dataset release** by:
+
+```bash
+python -m temporal_mcq materialize            # writes releases/<version>/
+python -m temporal_mcq verify-release         # re-check a release against its inputs
+```
+
+A release is written to `releases/<version>/` (default version
+`v0.1.0-human-reviewed`); that directory is **gitignored and never committed**.
+
+### What goes in
+
+- A question is included **iff** its latest effective decision is `verified`.
+- The serialized answer is the human's confirmed answer
+  (`verified_answer`) — equal to the proposed answer, or the correction where
+  the reviewer supplied one.
+- `incorrect`, `ambiguous`, `unverifiable`, and undecided questions are
+  **excluded** and listed in `exclusion_manifest.jsonl` with a reason.
+- Nothing is inferred: no answer is regenerated from a caption and no model
+  prediction is used.
+- A `verified` question that cannot be serialized is a **hard error** reported by
+  id — never a silent drop.
+- Splits are inherited unchanged from the source-video-level split; no question
+  or video moves between train / validation / test.
+
+### What it contains
+
+| Path | Contents |
+|---|---|
+| `data/{train,validation,test}.jsonl` | one canonical record per verified question |
+| `tao/{train,validation,test}/annotations.json` | `tao-vl-reason-v1.0` task-aware `mcq` envelopes |
+| `inclusion_manifest.jsonl` | every included question and its effective answer |
+| `exclusion_manifest.jsonl` | every excluded question and the reason |
+| `manifest.json` | counts, per-split breakdown, file hashes, fingerprint, rebuild command |
+| `provenance.json` | source dataset/revision, input hashes, inclusion rules |
+| `README.md` / `DATASET_CARD.md` | dataset card draft |
+
+The **dataset fingerprint** in `manifest.json` is a deterministic hash of the
+`data/` and `tao/` payloads; rebuilding from the unchanged annotation and
+decision inputs reproduces byte-identical files and the same fingerprint.
+
+### Current release
+
+| | |
+|---|---|
+| Version | `v0.1.0-human-reviewed` |
+| Records | **644** verified (train **523** / validation **57** / test **64**) |
+| Excluded | 408 (353 `ambiguous`, 55 `incorrect`) |
+| Corrections applied | 2 |
+| Source videos | train 383 / validation 44 / test 49 |
+
+The release is **not** distributed here: it derives from the source captions and
+video metadata, so it carries the same unresolved redistribution question as the
+annotations (see [`docs/dataset_provenance.md`](docs/dataset_provenance.md)).
+Publishing it is a separate, future step requiring a licensing review.
+
+## 15. Repository structure
 
 ```text
 cosmos3-temporal-mcq/
@@ -404,23 +466,26 @@ cosmos3-temporal-mcq/
 │   ├── generate.py  build.py  validate.py
 │   ├── reports.py  sheets.py  scoring.py
 │   ├── review.py               # decision store, integrity, accounting
-│   └── review_server.py        # local review interface (stdlib HTTP + ranges)
+│   ├── review_server.py        # local review interface (stdlib HTTP + ranges)
+│   └── materialize.py          # versioned release build + verify from decisions
 ├── scripts/                    # thin CLI wrappers (backwards compatible)
-│   └── audit_review_decisions.py  # read-only review-decision audit
-├── tests/                      # 244 CPU-only unit tests
+│   ├── audit_review_decisions.py  # read-only review-decision audit
+│   └── materialize_release.py     # build a versioned release
+├── tests/                      # 267 CPU-only unit tests
 ├── examples/
 │   └── sample_annotations.jsonl   # hand-written, synthetic
+├── releases/                   # materialized releases (local; never committed)
 └── reports/
     ├── dataset_audit.md        # committed (aggregate only)
     └── review_audit.md         # committed review-decision audit (aggregate only)
 ```
 
 Not committed (see `.gitignore`): `data/raw/`, prepared video trees, full
-annotations, caption extracts, contact sheets, review decisions, logs,
-virtualenvs, model checkpoints. Rationale in
+annotations, caption extracts, contact sheets, review decisions, materialized
+`releases/`, logs, virtualenvs, model checkpoints. Rationale in
 [`docs/dataset_provenance.md`](docs/dataset_provenance.md).
 
-## 15. Roadmap
+## 16. Roadmap
 
 - [x] Download and audit the source dataset
 - [x] Generate MCQ candidates with an explicit rejection policy
@@ -433,21 +498,22 @@ virtualenvs, model checkpoints. Rationale in
       (1,052 / 1,052 questions have a recorded decision)
 - [x] **Review-decision audit**: read-only, reproducible integrity report
       (`reports/review_audit.md`)
-- [ ] **Materialize the verified dataset** as a versioned release, applying the
-      review decisions as a non-destructive overlay
+- [x] **Materialize the verified dataset** as a versioned local release,
+      applying the review decisions as a non-destructive overlay
+      (`python -m temporal_mcq materialize`)
 - [ ] Cosmos 3 Nano **zero-shot** evaluation on the verified test split
 - [ ] **LoRA fine-tune** via TAO Cosmos-RL
 - [ ] Zero-shot vs LoRA comparison with paired uncertainty
 - [ ] Publish a dataset release subject to a licensing review (separate step;
-      the final dataset has **not** been created and nothing is on Hugging Face)
+      the verified release exists locally, but nothing is on Hugging Face)
 
-> Dataset materialization and Hugging Face publication are **separate** steps,
-> neither of which has been performed. The upstream source is licensed
-> `LicenseRef-OpenMDW-1.1` and redistribution rights are not yet cleared, so no
-> source videos, source-derived dataset release, or review artifacts have been
-> uploaded.
+> Dataset materialization and Hugging Face publication are **separate** steps.
+> The verified release has been materialized **locally** (§14); it has **not**
+> been uploaded. The upstream source is licensed `LicenseRef-OpenMDW-1.1` and
+> redistribution rights are not yet cleared, so no source videos,
+> source-derived dataset release, or review artifacts have been uploaded.
 
-## 16. Citation and license
+## 17. Citation and license
 
 Citation metadata is in [`CITATION.cff`](CITATION.cff). It carries placeholders
 (`OWNER`, repository URL) that the owner must fill in; no DOI or publication is

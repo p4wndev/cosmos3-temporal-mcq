@@ -28,7 +28,7 @@ decisions.
 | Automated TAO schema compatibility | **Passing** | The real Cosmos-RL validator classifies the data as `task_aware_video_reasoning` / `mcq` / `answer_type=letter` |
 | Human visual review | **Recorded — 1,052 / 1,052** | A recorded human judgement that the option is (or is not) supported by the video |
 | Independently auditable visual evidence | **Not established** | The records reproduce the *accounting*, not *what was seen* per decision (§7) |
-| Final verified dataset | **Not created** | Materialization is a separate future step |
+| Final verified dataset | **Materialized locally** (`releases/v0.1.0-human-reviewed`, 644 questions) | A versioned, reproducible release built from the effective decisions |
 
 Automated validation proves the dataset is *well-formed*. It says nothing about
 whether an answer is *true*. Because the captions are synthetic and unverified,
@@ -279,9 +279,11 @@ annotations.
 - no decision → excluded from any reported accuracy, and counted as unreviewed
   so the shortfall stays visible.
 
-**Materializing the overlay into a versioned dataset has not been done.** It is
-the next planned step, tracked separately from any Hugging Face publication; the
-two are distinct and neither has been performed.
+**Materializing the overlay into a versioned dataset has been done**, into
+`releases/<version>/` via `python -m temporal_mcq materialize` (default
+`v0.1.0-human-reviewed`). That directory is gitignored and never committed.
+Hugging Face publication is a **separate** step that has **not** been performed:
+the release exists locally only. See §8 for the release contents and rules.
 
 ### What the records do and do not establish
 
@@ -296,10 +298,65 @@ two are distinct and neither has been performed.
   The final review session's wall clock is shorter than the combined runtime of
   the videos it covers. Those are limitations of the *record keeping* — the
   reviewer recorded completing the review by watching the clips — and they mean
-  audit consistency alone cannot prove visual correctness. Materializing a
-  verified dataset would rest on this unreviewed-evidence caveat.
+  audit consistency alone cannot prove visual correctness. The materialized
+  release therefore carries this record-keeping caveat, while treating the
+  confirmed human decisions as the source of truth.
 
 Do **not** mark a question `verified` without having watched the clip.
 Do **not** mark a question `verified` because automated validation passed.
 Do **not** treat passing audit checks as proof that an answer is correct.
 Do **not** use test-split review outcomes to tune prompts or hyperparameters.
+
+## 8. Materializing the verified dataset
+
+The confirmed decisions are turned into a versioned, reproducible dataset
+release:
+
+```bash
+python -m temporal_mcq materialize            # -> releases/<version>/
+python -m temporal_mcq verify-release         # re-check a release against its inputs
+```
+
+Default version `v0.1.0-human-reviewed`; the `releases/` directory is
+**gitignored and never committed**. The release is a local artifact — publishing
+it to Hugging Face is a separate step that has not been performed.
+
+### Inclusion rules
+
+- include a question **iff** its latest effective decision is `verified`;
+- the serialized answer is the effective `verified_answer` — the proposed answer,
+  or the reviewer's correction where one was recorded;
+- exclude `incorrect`, `ambiguous`, `unverifiable`, and undecided questions, each
+  recorded in `exclusion_manifest.jsonl` with a reason;
+- never infer an answer, never regenerate from a caption, never substitute a
+  model prediction;
+- a `verified` question that fails to serialize is a **hard error reported by
+  id**, never a silent drop;
+- splits are inherited unchanged from the source-video-level split.
+
+### Release contents
+
+| Path | Contents |
+|---|---|
+| `data/{train,validation,test}.jsonl` | canonical release records |
+| `tao/{train,validation,test}/annotations.json` | TAO `tao-vl-reason-v1.0` `mcq` envelopes |
+| `inclusion_manifest.jsonl` | included questions and their effective answers |
+| `exclusion_manifest.jsonl` | excluded questions and reasons |
+| `manifest.json` | counts, per-split breakdown, file hashes, fingerprint, rebuild command |
+| `provenance.json` | source dataset/revision, input hashes, inclusion rules |
+| `README.md` / `DATASET_CARD.md` | dataset card draft |
+
+### Current release
+
+| | |
+|---|---|
+| Version | `v0.1.0-human-reviewed` |
+| Records | 644 verified (train 523 / validation 57 / test 64) |
+| Excluded | 408 (353 `ambiguous`, 55 `incorrect`) |
+| Corrections applied | 2 |
+| Source videos | train 383 / validation 44 / test 49 |
+
+Rebuilding from unchanged inputs reproduces byte-identical files and the same
+release fingerprint. `verify-release` independently re-derives the inclusion set
+from the annotations and decisions and checks the written files agree, that no
+source video spans two splits, and that the TAO envelopes match the data files.

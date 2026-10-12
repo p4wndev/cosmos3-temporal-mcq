@@ -11,18 +11,22 @@ result is reproducible.
 ## 1. Prerequisite: verified examples
 
 Evaluation runs on **verified** questions only — those with
-`review_status: verified` in the review decision file
-(see [`human_review.md`](human_review.md)).
+`review_status: verified` in the effective review decision (see
+[`human_review.md`](human_review.md)).
+
+The recommended source of scored questions is the **materialized verified
+release** (`releases/<version>/`, see [`human_review.md`](human_review.md) §8),
+which already contains exactly the effective `verified` questions with their
+confirmed answers. Its test split is the frozen evaluation set.
 
 The following are excluded from accuracy, and their counts must be reported:
 
-- questions with no review decision (still pending);
+- questions with no review decision;
 - questions marked `ambiguous` or `unverifiable`;
 - questions marked `incorrect` unless the human's `verified_answer` is used.
 
-Until the review is complete, any accuracy figure is a partial number and must
-be labelled as such, with the verified / excluded / pending breakdown alongside
-it.
+Any accuracy figure must be reported with the verified / excluded breakdown
+alongside it, never as a bare number.
 
 ## 2. Identical examples for both arms
 
