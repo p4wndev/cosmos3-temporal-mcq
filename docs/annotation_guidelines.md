@@ -140,7 +140,7 @@ One JSON object per line, holding everything the envelope carries plus:
 | `question`, `options`, `answer`, `answer_text` | The item itself |
 | `evidence`, `evidence_span_seconds`, `caption_claims` | Grounding |
 | `caption_source` | `synthetic_caption_json` |
-| `visual_verification` | `pending` for every record |
+| `visual_verification` | `pending` pre-review; `verified` in the released records |
 | `split` | `train` / `val` / `test` |
 
 The envelope is generated **from** this file, so the two cannot drift; the

@@ -131,10 +131,12 @@ def main() -> int:
                  " | ".join(str(ans.get(l, 0)) for l in "ABCD") + " |")
 
     q += ["", "## Visual verification status", "",
-          f"All {len(canonical)} records carry `visual_verification: pending`. "
-          "Captions are synthetic and unverified, so answers are caption-grounded "
-          "and have not been pixel-confirmed. Review the contact sheets in "
-          "`reports/contact_sheets/` before trusting accuracy numbers.", "",
+          f"These are the {len(canonical)} pre-review candidate questions; every "
+          "one carries `visual_verification: pending` at this stage because the "
+          "captions are synthetic and unverified. The **released** dataset contains "
+          "only the questions whose effective human review decision is `verified` "
+          "(644 of 1,052), with `visual_verification: verified`. See "
+          "`docs/human_review.md`.", "",
           "## Evidence provenance", "",
           "Every record carries the caption claim(s) supporting its answer and an "
           "`evidence_span_seconds` window. `caption_source` is always "

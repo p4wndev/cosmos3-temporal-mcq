@@ -25,11 +25,21 @@ DATASET_REPORTS_DIR = DATASET_DIR / "reports"
 REPORTS_DIR = PROJECT_ROOT / "reports"
 CONTACT_SHEETS_DIR = REPORTS_DIR / "contact_sheets"
 
+# Human review decisions.  A local record of human judgement, kept out of
+# version control: the dataset itself is not redistributed.
+REVIEW_DECISIONS = REPORTS_DIR / "review_decisions.jsonl"
+
 # Committed inputs/outputs.
 CONFIGS_DIR = PROJECT_ROOT / "configs"
 DOCS_DIR = PROJECT_ROOT / "docs"
 EXAMPLES_DIR = PROJECT_ROOT / "examples"
 DATASET_CONFIG = CONFIGS_DIR / "dataset.yaml"
+
+# Materialized dataset releases (versioned, local; not committed).
+RELEASES_DIR = PROJECT_ROOT / "releases"
+
+# Assembled single-repo bundle for publication (local; not committed).
+DIST_DIR = PROJECT_ROOT / "dist"
 
 
 def rel(path: Path) -> str:

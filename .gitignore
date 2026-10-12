@@ -15,6 +15,18 @@ bridgedata2_temporal_mcq/README.md
 reports/contact_sheets/
 reports/*.log
 
+# Human review decisions: a local record of human judgement over source-derived
+# material, kept out of version control like the annotations themselves.
+reports/review_decisions.jsonl
+reports/review_summary.*
+reports/review_decisions*.jsonl
+
+# Materialized dataset releases.  These are derived from source captions and
+# video metadata (and reference source clips by id), so they carry the same
+# unresolved redistribution question as the annotations.  Kept local; never
+# committed.  Rebuild with `python -m temporal_mcq materialize`.
+releases/
+
 # Generated media of any kind
 *.mp4
 *.mov
