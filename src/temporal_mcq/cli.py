@@ -24,6 +24,10 @@ COMMANDS = {
     "review-summary": "temporal_mcq.review",
     "materialize": "temporal_mcq.materialize",
     "verify-release": "temporal_mcq.materialize",
+    "bundle": "temporal_mcq.bundle",
+    "verify-bundle": "temporal_mcq.bundle",
+    "bundle-report": "temporal_mcq.bundle",
+    "publish-report": "temporal_mcq.bundle",
 }
 
 USAGE = """usage: python -m temporal_mcq <command> [options]
@@ -40,6 +44,10 @@ commands:
   review-summary  summarise review decisions and remaining unreviewed items
   materialize     build a versioned dataset release from verified decisions
   verify-release  re-check a materialized release against its inputs
+  bundle          assemble the single-repo Cosmos 3 LoRA dataset bundle
+  verify-bundle   verify an assembled dataset bundle
+  bundle-report   plan the bundle (counts, mapping coverage, sizes)
+  publish-report  DRY RUN: list files that would be published
 
 Run `python -m temporal_mcq <command> --help` for stage-specific options.
 """
@@ -48,6 +56,9 @@ Run `python -m temporal_mcq <command> --help` for stage-specific options.
 ENTRY_POINTS = {
     "review-summary": "summary_main",
     "verify-release": "verify_main",
+    "verify-bundle": "verify_main",
+    "bundle-report": "report_main",
+    "publish-report": "publish_main",
 }
 
 

@@ -13,9 +13,11 @@ consumes. It is the foundation for a planned comparison of Cosmos 3 Nano
 
 > **Status: dataset preparation complete and structurally validated. Human
 > visual review has been completed and confirmed, the review records have been
-> audited, and a versioned **human-verified dataset release** has been
-> materialized locally (644 questions). No model has been trained, benchmarked,
-> or evaluated, and nothing has been published to Hugging Face.**
+> audited, a versioned **human-verified dataset release** has been materialized
+> locally (644 questions), and that release has been packaged into a
+> **single-repository training bundle** (476 source videos, `reference` and
+> `embedded` media modes). No model has been trained, benchmarked, or
+> evaluated, and nothing has been published to Hugging Face.**
 
 ---
 
@@ -30,7 +32,9 @@ consumes. It is the foundation for a planned comparison of Cosmos 3 Nano
 | Answer format | Four options `A`–`D`; assistant turn is the option letter |
 | Target schema | `tao-vl-reason-v1.0`, task-aware `mcq`, `answer_type: letter` |
 | Automated validation | **0 hard failures, 0 soft failures** |
-| Human visual review | **Recorded — 1,052/1,052 reviewed**, 644 `verified` of 1,052 |
+| Human visual review | **Complete — 1,052/1,052 reviewed**, 644 `verified` of 1,052 |
+| Verified release | `releases/v0.1.0-human-reviewed` — 644 questions (local; not committed) |
+| Single-repo bundle | `dist/v0.2.0-cosmos3-lora` — 476 source videos, reference + embedded modes (local) |
 | GPU required | No. Everything here is CPU-only |
 
 ## 2. Research motivation
@@ -59,8 +63,10 @@ zero-shot baseline. **That comparison has not yet been run.** See
 | Source-video-level split | Complete (seeded, leakage-checked) |
 | TAO `tao-vl-reason-v1.0` export | Complete, accepted by the real TAO validator |
 | Automated validation | Complete — 0 hard, 0 soft failures |
-| Unit tests | Complete — 85 passing, CPU-only |
-| **Human visual verification** | **Not started** |
+| Unit tests | Complete — 294 collected, CPU-only (32 review-server tests need a network-capable sandbox) |
+| **Human visual verification** | **Complete** — 1,052 / 1,052 questions reviewed |
+| **Verified release materialized** | **Complete** — `releases/v0.1.0-human-reviewed` (644 questions) |
+| **Single-repository bundle** | **Built locally** — `dist/v0.2.0-cosmos3-lora` (not yet published) |
 | **Zero-shot evaluation** | **Not started** |
 | **LoRA fine-tuning** | **Not started** |
 | **Zero-shot vs LoRA comparison** | **Not started** |
@@ -273,17 +279,6 @@ Principal limitations (full list in [`docs/limitations.md`](docs/limitations.md)
 - Caption timestamps are internally consistent but not pixel-verified.
 - Redistribution rights unresolved; no root license chosen.
 
-Principal limitations (full list in [`docs/limitations.md`](docs/limitations.md)):
-
-- Answers are caption-grounded, not ground truth.
-- 641 of 1,273 source clips yield questions; the rest lack sufficient grounded
-  evidence or any recognisable object.
-- The uniqueness guard is deliberately conservative, trading yield for safety.
-- Only three question templates; a curated object lexicon.
-- One whole-clip caption window per clip; no sub-clip windowing.
-- Caption timestamps are internally consistent but not pixel-verified.
-- Redistribution rights unresolved; no root license chosen.
-
 ## 11. Installation (CPU-only)
 
 ```bash
@@ -331,7 +326,7 @@ Validating an already-prepared dataset needs neither network nor the source
 videos' bytes beyond what is local:
 
 ```bash
-make test            # 244 CPU-only unit tests
+make test            # CPU-only unit tests
 make validate        # 0 hard failures expected
 ```
 
@@ -377,8 +372,9 @@ corrected answers (see §10). The recorded decisions are consistent and
 reproducible.
 
 **The verified dataset has been materialized** as a versioned local release —
-see §14. Materialization and Hugging Face publication are separate steps: the
-release exists locally and has **not** been uploaded. See
+see §14, and packaged into a single-repository bundle — see §15. Materialization,
+bundling, and Hugging Face publication are separate steps: the release and
+bundle exist locally and have **not** been uploaded. See
 [`docs/human_review.md`](docs/human_review.md) and
 [`reports/review_audit.md`](reports/review_audit.md).
 
@@ -441,7 +437,84 @@ video metadata, so it carries the same unresolved redistribution question as the
 annotations (see [`docs/dataset_provenance.md`](docs/dataset_provenance.md)).
 Publishing it is a separate, future step requiring a licensing review.
 
-## 15. Repository structure
+## 15. Single-repository training bundle (built locally)
+
+The materialized release is packaged into **one downloadable repository** so a
+GPU cluster obtains everything authorized for the intended Cosmos 3 Nano LoRA
+experiment from a single download:
+
+```bash
+make audit-dataset              # plan: example/video counts + mapping coverage
+make build-training-bundle      # -> dist/v0.2.0-cosmos3-lora (media-mode=reference)
+make build-training-bundle-embedded   # same, but WITH the source videos
+make verify-training-bundle     # re-check an assembled bundle
+make upload-dataset             # DRY RUN: list exactly what would be published
+```
+
+### Why two media modes
+
+Upstream video redistribution (`nvidia/BridgeData2-Subset-Synthetic-Captions`,
+`LicenseRef-OpenMDW-1.1`) has **not been cleared**, so the bundle ships in
+**`reference` mode** by default:
+
+| Mode | Videos in the bundle? | Self-contained? |
+|---|---|---|
+| `reference` (default, shipping) | No — `manifests/video_manifest.jsonl` only | No; the cluster runs `scripts/download_videos.py` to fetch the pinned upstream clips |
+| `embedded` | Yes — copied under `videos/<split>/` | Yes; built only once redistribution rights are confirmed |
+
+Both modes produce the same *bound* layout, so the training command is identical
+either way. The mapping is by authoritative identifier only: the record's
+`source_video_id` joins the upstream manifest `uuid` (`video_id = <uuid>.mp4`).
+This is never inferred from filenames, directory order, or question text.
+
+### Bundle layout (in `dist/v0.2.0-cosmos3-lora/`)
+
+```text
+README.md  DATASET_CARD.md  manifest.json  provenance.json
+data/{train,validation,test}.jsonl            # canonical MCQ records (644)
+tao/{train,validation,test}/annotations.json  # tao-vl-reason-v1.0 mcq envelopes
+manifests/inclusion_manifest.jsonl            # included questions + answer
+manifests/exclusion_manifest.jsonl            # excluded questions + reason
+manifests/video_manifest.jsonl                # 476 required videos (id/path/size/sha256)
+videos/<split>/<video_id>.mp4                 # only in embedded mode / after binding
+configs/dataset.yaml                          # training-side dataset config
+scripts/verify_dataset.py                     # validate the download
+scripts/download_videos.py                    # bind the pinned upstream videos (reference mode)
+scripts/prepare_training_data.py              # build the Cosmos-RL inputs
+```
+
+### Cluster usage (tested locally against the pinned snapshot)
+
+```bash
+# Reference mode: download the single repo, then bind the upstream videos.
+hf download p4wndev/cosmos3-temporal-mcq --repo-type dataset \
+  --revision <IMMUTABLE_RELEASE_REVISION> --local-dir ./datasets/cosmos3-temporal-mcq
+python ./datasets/cosmos3-temporal-mcq/scripts/download_videos.py \
+  --root ./datasets/cosmos3-temporal-mcq      # requires upstream access
+python ./datasets/cosmos3-temporal-mcq/scripts/verify_dataset.py \
+  --root ./datasets/cosmos3-temporal-mcq --require-videos
+python ./datasets/cosmos3-temporal-mcq/scripts/prepare_training_data.py \
+  --root ./datasets/cosmos3-temporal-mcq \
+  --output ./datasets/cosmos3-temporal-mcq-prepared
+```
+
+The bundle's `manifest.json` carries the **bundle fingerprint**
+(`fece449f0d04c00b976fa2f58cd15fc8d436d1506ce8a902097544432285f57e`), the exact
+rebuild command, and the source dataset/revision/license. Rebuilding from
+unchanged inputs reproduces byte-identical files and the same fingerprint, and
+the fingerprint does not depend on the media mode (it hashes `data/`, `tao/`,
+and `manifests/` only). The **`verify_dataset.py`** script is pure standard
+library, so it runs on the cluster with no repository checkout.
+
+The bundle is **not** distributed here: it inherits the same unresolved
+redistribution question as the annotations (see
+[`docs/dataset_provenance.md`](docs/dataset_provenance.md)). Publishing it, and
+in particular publishing videos, is a separate, future step requiring a
+licensing review. The dry run (`make upload-dataset`) lists exactly what would
+be uploaded and fails if any credential, secret, raw review record, or model
+weight would be included.
+
+## 16. Repository structure
 
 ```text
 cosmos3-temporal-mcq/
@@ -467,14 +540,17 @@ cosmos3-temporal-mcq/
 │   ├── reports.py  sheets.py  scoring.py
 │   ├── review.py               # decision store, integrity, accounting
 │   ├── review_server.py        # local review interface (stdlib HTTP + ranges)
-│   └── materialize.py          # versioned release build + verify from decisions
+│   ├── materialize.py          # versioned release build + verify from decisions
+│   └── bundle.py               # single-repo bundle: assemble/verify/report/publish dry-run
 ├── scripts/                    # thin CLI wrappers (backwards compatible)
 │   ├── audit_review_decisions.py  # read-only review-decision audit
-│   └── materialize_release.py     # build a versioned release
-├── tests/                      # 267 CPU-only unit tests
+│   ├── materialize_release.py     # build a versioned release
+│   └── build_bundle.py            # assemble the single-repo bundle
+├── tests/                      # CPU-only unit tests
 ├── examples/
 │   └── sample_annotations.jsonl   # hand-written, synthetic
 ├── releases/                   # materialized releases (local; never committed)
+├── dist/                       # assembled single-repo bundles (local; never committed)
 └── reports/
     ├── dataset_audit.md        # committed (aggregate only)
     └── review_audit.md         # committed review-decision audit (aggregate only)
@@ -482,10 +558,11 @@ cosmos3-temporal-mcq/
 
 Not committed (see `.gitignore`): `data/raw/`, prepared video trees, full
 annotations, caption extracts, contact sheets, review decisions, materialized
-`releases/`, logs, virtualenvs, model checkpoints. Rationale in
+`releases/`, assembled `dist/` bundles, logs, virtualenvs, model checkpoints.
+Rationale in
 [`docs/dataset_provenance.md`](docs/dataset_provenance.md).
 
-## 16. Roadmap
+## 17. Roadmap
 
 - [x] Download and audit the source dataset
 - [x] Generate MCQ candidates with an explicit rejection policy
@@ -501,19 +578,24 @@ annotations, caption extracts, contact sheets, review decisions, materialized
 - [x] **Materialize the verified dataset** as a versioned local release,
       applying the review decisions as a non-destructive overlay
       (`python -m temporal_mcq materialize`)
+- [x] **Package a single-repository bundle** (`python -m temporal_mcq bundle`)
+      with the mapping, TAO envelopes, bootstrap scripts, and a dry-run
+      publication report
 - [ ] Cosmos 3 Nano **zero-shot** evaluation on the verified test split
 - [ ] **LoRA fine-tune** via TAO Cosmos-RL
 - [ ] Zero-shot vs LoRA comparison with paired uncertainty
 - [ ] Publish a dataset release subject to a licensing review (separate step;
-      the verified release exists locally, but nothing is on Hugging Face)
+      the verified release and bundle exist locally, but nothing is on
+      Hugging Face)
 
 > Dataset materialization and Hugging Face publication are **separate** steps.
-> The verified release has been materialized **locally** (§14); it has **not**
-> been uploaded. The upstream source is licensed `LicenseRef-OpenMDW-1.1` and
-> redistribution rights are not yet cleared, so no source videos,
-> source-derived dataset release, or review artifacts have been uploaded.
+> The verified release has been materialized **locally** (§14) and packaged into
+> a single-repository bundle (§15); neither has been uploaded. The upstream
+> source is licensed `LicenseRef-OpenMDW-1.1` and redistribution rights are not
+> yet cleared, so no source videos, source-derived dataset release, or review
+> artifacts have been uploaded.
 
-## 17. Citation and license
+## 18. Citation and license
 
 Citation metadata is in [`CITATION.cff`](CITATION.cff). It carries placeholders
 (`OWNER`, repository URL) that the owner must fill in; no DOI or publication is

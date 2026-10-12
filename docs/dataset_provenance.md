@@ -52,6 +52,7 @@ imprecise descriptions of object identity, motion, and task intent".
 | `reports/dataset_audit.md` | Aggregate description of the source dataset | Aggregate only |
 | `reports/contact_sheets/*.jpg` | Frames extracted from source videos | **Not published** |
 | `releases/**` | Materialized verified dataset (derived annotations + review overlay) | **Not published** |
+| `dist/**` | Assembled single-repository bundle (release + mapping + TAO envelopes + bootstrap scripts, optionally videos) | **Not published** |
 | `data/raw/bridgedata2/**` | Verbatim copy of the source dataset | **Not published** |
 | `examples/sample_annotations.jsonl` | Hand-written, clearly synthetic | Published |
 
@@ -86,6 +87,21 @@ The underlying BridgeData V2 videos are real-world robot-manipulation
 recordings. Neither this project nor the source subset grants rights to
 redistribute them. **No video file, and no extracted frame, is published.**
 
+### On the single-repository bundle
+
+`dist/<version>/` is the assembled, downloadable repository (see README §15).
+It contains the release's `data/` and `tao/` payloads, the inclusion/exclusion
+manifests, a `video_manifest.jsonl` describing every required source video by
+identifier, path, size, and SHA-256, and cluster scripts. It inherits the same
+OpenMDW 1.1 redistribution question as the release.
+
+Because video redistribution is **not cleared**, the shipping bundle is built in
+**`reference` mode**: it carries no video bytes, only the manifest and the
+`download_videos.py` bootstrap that re-acquires the exact pinned upstream clips
+on the cluster. An **`embedded`** build (videos copied under `videos/`) exists as
+a local build option and must not be published until the rights question in §3
+is resolved and the videos' redistribution is expressly permitted.
+
 ## 3. Unresolved questions
 
 These are genuinely open and must be answered by the repository owner before
@@ -105,6 +121,10 @@ publication:
    `examples/sample_annotations.jsonl` was written by hand for documentation and
    uses invented objects and questions. It is intended to contain no source
    content. It should be re-checked if the generation templates change.
+5. **May the source videos be redistributed?** The bundle's `embedded` mode
+   would ship the 476 required clips. That is gated on this question. Until it
+   is answered, only the `reference`-mode bundle (annotations + manifest +
+   bootstrap downloader) is eligible for publication.
 
 ## 4. Attribution requirements
 

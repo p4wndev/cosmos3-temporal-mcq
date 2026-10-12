@@ -15,7 +15,8 @@ endif
 
 .DEFAULT_GOAL := help
 .PHONY: help venv install test validate validate-full lint audit reports sheets \
-        download generate build clean-check review review-summary materialize verify-release
+        download generate build clean-check review review-summary materialize verify-release \
+        audit-dataset build-training-bundle build-training-bundle-embedded verify-training-bundle upload-dataset
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -87,6 +88,26 @@ materialize: ## Build the versioned verified dataset release into releases/<vers
 
 verify-release: ## Re-check the materialized release against its inputs
 	$(PYTHON) -m temporal_mcq verify-release
+
+# ---------------------------------------------------------------------------
+# Single-repository bundle (Cosmos 3 LoRA; local build, never auto-uploaded)
+# ---------------------------------------------------------------------------
+
+audit-dataset: ## Audit the materialized release + plan the bundle (dry run)
+	$(PYTHON) -m temporal_mcq verify-release --expect-total 644
+	$(PYTHON) -m temporal_mcq bundle-report
+
+build-training-bundle: ## Assemble the bundle into dist/<version> (media-mode=reference)
+	$(PYTHON) -m temporal_mcq bundle --media-mode reference --verify
+
+build-training-bundle-embedded: ## Assemble the bundle WITH videos (requires cleared rights)
+	$(PYTHON) -m temporal_mcq bundle --media-mode embedded --verify
+
+verify-training-bundle: ## Verify an assembled bundle (BUNDLE=dist/<version>)
+	$(PYTHON) -m temporal_mcq verify-bundle --root $(or $(BUNDLE),dist/v0.2.0-cosmos3-lora)
+
+upload-dataset: ## DRY RUN: report exactly what would be published (no upload)
+	$(PYTHON) -m temporal_mcq publish-report --root $(or $(BUNDLE),dist/v0.2.0-cosmos3-lora)
 
 # ---------------------------------------------------------------------------
 # Hygiene

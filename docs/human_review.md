@@ -1,7 +1,7 @@
 # Human review workflow
 
-**Status: review complete and audited. The final verified dataset has not been
-materialized.**
+**Status: review complete, audited, materialized locally, and packaged into a
+single-repository dataset bundle. Nothing has been published.**
 
 The human visual review has been **completed and recorded**: every one of the
 1,052 questions has a recorded decision, made by watching the source video. The
@@ -10,11 +10,12 @@ decisions are **644 `verified`, 55 `incorrect`, 353 `ambiguous`, 0
 revisions** — 1,055 decision records in all. The decision file and its audit are
 described below.
 
-The recorded decisions are internally consistent and reproducible. They do
-**not**, however, independently reconstruct the visual evidence behind each
-decision — see §7, which states plainly what the records do and do not
-establish. Decision records being consistent is not proof that any individual
-answer is correct.
+The recorded decisions are internally consistent and reproducible, and they are
+the source of truth for the materialized release and the packaged bundle (§8,
+§9). They do **not**, however, independently reconstruct the visual evidence
+behind each decision — see §7, which states plainly what the records do and do
+not establish. Decision records being consistent is not proof that any
+individual answer is correct.
 
 This document explains what has and has not been checked, why contact sheets
 are not sufficient, how to run the review interface, and how to audit the
@@ -29,6 +30,7 @@ decisions.
 | Human visual review | **Recorded — 1,052 / 1,052** | A recorded human judgement that the option is (or is not) supported by the video |
 | Independently auditable visual evidence | **Not established** | The records reproduce the *accounting*, not *what was seen* per decision (§7) |
 | Final verified dataset | **Materialized locally** (`releases/v0.1.0-human-reviewed`, 644 questions) | A versioned, reproducible release built from the effective decisions |
+| Single-repository bundle | **Built locally** (`dist/v0.2.0-cosmos3-lora`) | A downloadable bundle (`data/`, `tao/`, manifests, bootstrap scripts) for the Cosmos 3 LoRA run — see §9 |
 
 Automated validation proves the dataset is *well-formed*. It says nothing about
 whether an answer is *true*. Because the captions are synthetic and unverified,
@@ -281,9 +283,11 @@ annotations.
 
 **Materializing the overlay into a versioned dataset has been done**, into
 `releases/<version>/` via `python -m temporal_mcq materialize` (default
-`v0.1.0-human-reviewed`). That directory is gitignored and never committed.
-Hugging Face publication is a **separate** step that has **not** been performed:
-the release exists locally only. See §8 for the release contents and rules.
+`v0.1.0-human-reviewed`). That release is then packaged into a
+single-repository bundle under `dist/<version>/` (§9). Both directories are
+gitignored and never committed. Hugging Face publication is a **separate** step
+that has **not** been performed: the release and bundle exist locally only.
+See §8 for the release rules and §9 for the bundle.
 
 ### What the records do and do not establish
 
@@ -360,3 +364,47 @@ Rebuilding from unchanged inputs reproduces byte-identical files and the same
 release fingerprint. `verify-release` independently re-derives the inclusion set
 from the annotations and decisions and checks the written files agree, that no
 source video spans two splits, and that the TAO envelopes match the data files.
+
+## 9. Packaging the release as a single-repository bundle
+
+The confirmed decisions flow through two stages, and only the first is a
+human-review artifact:
+
+1. **Materialize the release** (`python -m temporal_mcq materialize`) —
+   the 644 effective `verified` questions, with the human's confirmed or
+   corrected answer, and the exclusion manifest for the other 408.
+2. **Assemble the bundle** (`python -m temporal_mcq bundle`) — the release plus
+   the question→video mapping, the TAO envelopes, cluster scripts, and (mode
+   dependent) the source videos, into one downloadable repository.
+
+```bash
+make audit-dataset              # plan: counts, mapping coverage, media size
+make build-training-bundle      # -> dist/v0.2.0-cosmos3-lora (media-mode=reference)
+make verify-training-bundle     # re-check an assembled bundle
+make upload-dataset             # DRY RUN: list exactly what would be published
+```
+
+The bundle is a **consumer** of the decisions: it never rewrites them, never
+re-infers an answer, and fails hard (never silently drops) if a `verified`
+question cannot be mapped to its authoritative source video. The mapping is by
+identifier only — the record's `source_video_id` joined to the upstream
+manifest `uuid` (and `video_id = <uuid>.mp4`).
+
+Two media modes exist because upstream video redistribution is not yet cleared:
+
+- **`reference`** (default, and the shipping choice) — no video bytes; the
+  bundle carries `manifests/video_manifest.jsonl` (id, upstream path, size,
+  SHA-256) and `scripts/download_videos.py`, which re-acquires the exact pinned
+  upstream videos and binds them under `videos/`.
+- **`embedded`** — the required videos are copied into the bundle so the
+  download is self-contained. Run it only once redistribution rights are
+  confirmed; it is built locally and not shipped by default.
+
+Both modes produce the same *bound* layout, so the training command does not
+change between them. Full details, including the bundle fingerprint, the
+file list, and the cluster usage instructions, are in the bundle's own
+`README.md`/`DATASET_CARD.md` and `manifest.json`.
+
+Publication of the bundle (and of any videos) is a **separate** step that has
+**not** been performed. See [`dataset_provenance.md`](dataset_provenance.md)
+for the licensing question that gates it.

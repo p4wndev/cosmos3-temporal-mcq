@@ -38,6 +38,9 @@ DATASET_CONFIG = CONFIGS_DIR / "dataset.yaml"
 # Materialized dataset releases (versioned, local; not committed).
 RELEASES_DIR = PROJECT_ROOT / "releases"
 
+# Assembled single-repo bundle for publication (local; not committed).
+DIST_DIR = PROJECT_ROOT / "dist"
+
 
 def rel(path: Path) -> str:
     """Path relative to the repository root, for stable console output."""
