@@ -35,6 +35,9 @@ DOCS_DIR = PROJECT_ROOT / "docs"
 EXAMPLES_DIR = PROJECT_ROOT / "examples"
 DATASET_CONFIG = CONFIGS_DIR / "dataset.yaml"
 
+# Materialized dataset releases (versioned, local; not committed).
+RELEASES_DIR = PROJECT_ROOT / "releases"
+
 
 def rel(path: Path) -> str:
     """Path relative to the repository root, for stable console output."""

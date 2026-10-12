@@ -22,6 +22,8 @@ COMMANDS = {
     "sheets": "temporal_mcq.sheets",
     "review-server": "temporal_mcq.review_server",
     "review-summary": "temporal_mcq.review",
+    "materialize": "temporal_mcq.materialize",
+    "verify-release": "temporal_mcq.materialize",
 }
 
 USAGE = """usage: python -m temporal_mcq <command> [options]
@@ -36,6 +38,8 @@ commands:
   sheets          build contact sheets for human visual review
   review-server   serve the local human visual-verification interface
   review-summary  summarise review decisions and remaining unreviewed items
+  materialize     build a versioned dataset release from verified decisions
+  verify-release  re-check a materialized release against its inputs
 
 Run `python -m temporal_mcq <command> --help` for stage-specific options.
 """
@@ -43,6 +47,7 @@ Run `python -m temporal_mcq <command> --help` for stage-specific options.
 # Commands whose module exposes a differently named entry point.
 ENTRY_POINTS = {
     "review-summary": "summary_main",
+    "verify-release": "verify_main",
 }
 
 

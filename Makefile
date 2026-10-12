@@ -15,7 +15,7 @@ endif
 
 .DEFAULT_GOAL := help
 .PHONY: help venv install test validate validate-full lint audit reports sheets \
-        download generate build clean-check review review-summary
+        download generate build clean-check review review-summary materialize verify-release
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -77,6 +77,16 @@ review: ## Serve the local review interface at http://127.0.0.1:8765/
 
 review-summary: ## Print the review status summary
 	$(PYTHON) -m temporal_mcq review-summary
+
+# ---------------------------------------------------------------------------
+# Verified dataset release (local only; never committed or uploaded)
+# ---------------------------------------------------------------------------
+
+materialize: ## Build the versioned verified dataset release into releases/<version>/
+	$(PYTHON) -m temporal_mcq materialize
+
+verify-release: ## Re-check the materialized release against its inputs
+	$(PYTHON) -m temporal_mcq verify-release
 
 # ---------------------------------------------------------------------------
 # Hygiene
