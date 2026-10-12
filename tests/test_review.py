@@ -415,6 +415,74 @@ def test_markdown_omits_the_warning_once_something_is_reviewed(store, annotation
     assert "No questions have been visually verified" not in text
 
 
+# --------------------------------------------------------------------------
+# Review-rate percentage (regression: falsy zero)
+# --------------------------------------------------------------------------
+
+def test_reviewed_percent_is_100_when_everything_is_reviewed(store, annotations):
+    """Regression: a bare `unreviewed_pct and ...` short-circuits to 0.0 when
+    the unreviewed share is exactly 0, so a complete review rendered as
+    "Reviewed: N (0.0%)"."""
+    for rec in annotations:
+        store.append(make_decision(rec["id"], "verified", rec["answer"],
+                                   source_video_id=rec["source_video_id"],
+                                   split=rec["split"]), annotations)
+    summary = rv.summarise(annotations, store)
+    assert summary["reviewed"] == 4
+    assert summary["unreviewed"] == 0
+    assert summary["reviewed_percent"] == 100.0
+    assert summary["unreviewed_percent"] == 0.0
+
+
+def test_markdown_renders_100_percent_for_a_complete_review(store, annotations):
+    for rec in annotations:
+        store.append(make_decision(rec["id"], "verified", rec["answer"],
+                                   source_video_id=rec["source_video_id"],
+                                   split=rec["split"]), annotations)
+    text = rv.render_markdown(rv.summarise(annotations, store))
+    assert "Reviewed: **4** (100.0%)" in text
+    assert "(0.0%)" not in text.split("Corrected")[0].split("Unreviewed")[0]
+
+
+def test_reviewed_percent_is_zero_when_nothing_is_reviewed(store, annotations):
+    summary = rv.summarise(annotations, store)
+    assert summary["reviewed"] == 0
+    assert summary["reviewed_percent"] == 0.0
+    assert summary["unreviewed_percent"] == 100.0
+
+
+def test_reviewed_and_unreviewed_percentages_are_complementary(store, annotations):
+    store.append(make_decision("q1", "verified", "A"), annotations)
+    summary = rv.summarise(annotations, store)
+    assert round(summary["reviewed_percent"] + summary["unreviewed_percent"], 2) == 100.0
+    assert summary["reviewed_percent"] == 25.0
+
+
+def test_status_percentages_sum_to_100(store, annotations):
+    store.append(make_decision("q1", "verified", "A"), annotations)
+    store.append(make_decision("q2", "ambiguous", None), annotations)
+    overall = rv.summarise(annotations, store)["overall"]
+    total = sum(overall["percent"][s] for s in (*rv.STATUSES, "unreviewed"))
+    assert round(total, 2) == 100.0
+
+
+def test_percentages_are_not_affected_by_an_empty_dataset(store):
+    """A zero denominator must not raise, and must not invent a percentage."""
+    summary = rv.summarise([], store)
+    assert summary["overall"]["total"] == 0
+    assert summary["reviewed_percent"] == 0.0
+    assert summary["overall"]["percent"]["unreviewed"] == 0.0
+
+
+def test_reviewed_percent_appears_in_json_output(store, annotations):
+    """The rate must be in the data, not only in the rendered markdown."""
+    store.append(make_decision("q1", "verified", "A"), annotations)
+    summary = rv.summarise(annotations, store)
+    assert "reviewed_percent" in summary
+    assert "unreviewed_percent" in summary
+
+
+
 def test_markdown_reports_integrity_problems(store, annotations):
     store.path.parent.mkdir(parents=True, exist_ok=True)
     store.path.write_text(make_decision("ghost").to_json() + "\n", encoding="utf-8")

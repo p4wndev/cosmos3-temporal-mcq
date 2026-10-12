@@ -418,20 +418,40 @@ def summarise(annotations: Sequence[Mapping[str, Any]],
                 missing_videos.append(record["id"])
 
     def with_pct(counts: dict[str, int]) -> dict[str, Any]:
-        total = counts["total"] or 1
+        total = counts["total"]
+        # Guard against a zero denominator only; `counts['total'] or 1` would
+        # also be correct here, but being explicit keeps the intent clear.
+        denominator = total if total else 1
         return {
             **counts,
-            "percent": {k: round(100.0 * v / total, 2)
+            "percent": {k: round(100.0 * v / denominator, 2)
                         for k, v in counts.items() if k != "total"},
         }
 
     reviewed = overall["total"] - overall["unreviewed"]
+    overall_pct = with_pct(overall)
+    # The reviewed rate is the complement of the unreviewed rate.  It is
+    # computed explicitly rather than inline in the renderer: a bare
+    # `unreviewed_pct and ...` short-circuits to 0.0 when the unreviewed share
+    # is exactly 0, which reported "Reviewed: 1052 (0.0%)" for a complete
+    # review.  Percentages belong in the summary, not in the formatting code.
+    #
+    # With no questions at all, "100% reviewed" would be vacuously true and
+    # misleading, so an empty dataset reports 0.0 for both rates.
+    if overall["total"]:
+        reviewed_percent = round(100.0 - overall_pct["percent"]["unreviewed"], 2)
+        unreviewed_percent = overall_pct["percent"]["unreviewed"]
+    else:
+        reviewed_percent = 0.0
+        unreviewed_percent = 0.0
     return {
         "dataset_fingerprint": dataset_fingerprint(annotations),
         "decisions_file": str(store.path),
-        "overall": with_pct(overall),
+        "overall": overall_pct,
         "reviewed": reviewed,
         "unreviewed": overall["unreviewed"],
+        "reviewed_percent": reviewed_percent,
+        "unreviewed_percent": unreviewed_percent,
         "by_split": {k: with_pct(v) for k, v in sorted(by_split.items())},
         "by_category": {k: with_pct(v) for k, v in sorted(by_category.items())},
         "corrected_answers": corrected,
@@ -457,10 +477,8 @@ def render_markdown(summary: Mapping[str, Any]) -> str:
     overall = summary["overall"]
     lines += [
         f"- Questions total: **{overall['total']}**",
-        f"- Reviewed: **{summary['reviewed']}** "
-        f"({overall['percent'].get('unreviewed', 0) and round(100 - overall['percent']['unreviewed'], 2)}%)",
-        f"- Unreviewed: **{summary['unreviewed']}** "
-        f"({overall['percent'].get('unreviewed', 0)}%)",
+        f"- Reviewed: **{summary['reviewed']}** ({summary['reviewed_percent']}%)",
+        f"- Unreviewed: **{summary['unreviewed']}** ({summary['unreviewed_percent']}%)",
         f"- Corrected answers: **{summary['corrected_answers']}**",
         f"- Superseded decisions retained: **{summary['superseded_decisions']}**",
         f"- Dataset fingerprint: `{summary['dataset_fingerprint'][:16]}…`",

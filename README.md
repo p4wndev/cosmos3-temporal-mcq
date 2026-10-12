@@ -11,9 +11,11 @@ them in the exact annotation schema the Cosmos-RL video-reasoning recipe
 consumes. It is the foundation for a planned comparison of Cosmos 3 Nano
 **zero-shot** against a **LoRA fine-tune**.
 
-> **Status: dataset preparation complete and structurally validated. No model
-> has been trained, benchmarked, or evaluated. Answers are caption-grounded
-> candidates and human visual verification is pending.**
+> **Status: dataset preparation complete and structurally validated. Human
+> visual review has been completed and recorded, and the review records have
+> been audited. No model has been trained, benchmarked, or evaluated. A final
+> verified dataset release has not been materialized, and nothing has been
+> published to Hugging Face.**
 
 ---
 
@@ -28,7 +30,7 @@ consumes. It is the foundation for a planned comparison of Cosmos 3 Nano
 | Answer format | Four options `A`–`D`; assistant turn is the option letter |
 | Target schema | `tao-vl-reason-v1.0`, task-aware `mcq`, `answer_type: letter` |
 | Automated validation | **0 hard failures, 0 soft failures** |
-| Human visual verification | **Pending — 0 questions verified** |
+| Human visual review | **Recorded — 1,052/1,052 reviewed**, 644 `verified` of 1,052 |
 | GPU required | No. Everything here is CPU-only |
 
 ## 2. Research motivation
@@ -116,7 +118,7 @@ video trees, full annotations, caption extracts and contact sheets are
                   │  validate  (structural + real TAO schema check)
                   ▼
   ┌──────────────────────────────┐
-  │ 0 hard failures, 0 soft      │   → human review (pending)
+  │ 0 hard failures, 0 soft      │   → human review (recorded)
   └──────────────────────────────┘
 ```
 
@@ -215,20 +217,60 @@ media existence and decode, frame-index arithmetic, media-directory
 reconciliation (stale-link leakage), source-video leakage, cross-split
 duplicates, and answer/category distribution.
 
-## 10. Human verification status and limitations
+## 10. Human review status and limitations
 
-**No question has been visually verified.** Every record carries
-`visual_verification: pending`, and `make review-summary` reports
-**0 reviewed / 1,052 unreviewed**. Contact sheets exist under
-`reports/contact_sheets/` for manual inspection but are **not sufficient** to
-confirm temporal questions — three still frames cannot show ordering or subtle
-state change. Verification requires watching the clip.
+The human visual review has been **completed and recorded**, and the resulting
+records have been **audited**. Every question was reviewed against the actual
+source video, and corrected answers were recorded where the proposed answer was
+wrong or ambiguous. This section describes what the records show and, just as
+importantly, what they do **not** establish.
 
-A local review interface is implemented and ready to use (`make review`); see
-§13 for how to run it. The status vocabulary (`verified` / `incorrect` /
-`ambiguous` / `unverifiable`), the append-only decision file, and the staleness
-and duplicate rules are specified in
-[`docs/human_review.md`](docs/human_review.md).
+| Measure | Value |
+|---|---|
+| Questions with a recorded review decision | **1,052 / 1,052** (100.0%) |
+| decision records (append-only, incl. superseded) | 1,055 |
+| effective `verified` | **644** |
+| effective `incorrect` | 55 |
+| effective `ambiguous` | 353 |
+| effective `unverifiable` | 0 |
+| corrected-answer records | 57 |
+| reviewers | 1 |
+
+These four states are distinct and must not be conflated:
+
+- **Questions with a recorded review decision** — all 1,052 questions have one.
+- **Decisions marked `verified`** — 644 questions whose recorded judgement is
+  that the option is supported by the video. This is a human claim, not an
+  independently reproducible fact.
+- **Independently auditable evidence of the visual-review procedure** — **not
+  established.** The audit can reproduce every *structural* fact (ids,
+  fingerprints, counts, status resolution), but the stored records do not
+  reconstruct what was seen per decision: no free-text note was recorded,
+  almost no decision stores a clip position, and the final review session's
+  wall clock is shorter than the combined runtime of the videos it covers. This
+  is a limitation of the *record*, not a finding that individual decisions are
+  wrong — the reviewer recorded completing the review by watching the clips.
+  Consistency checks alone do not prove visual correctness.
+- **A final verified dataset release** — **not created.** Materializing the
+  reviewed decisions into a versioned dataset is a separate, future step.
+
+The audit is recorded in [`reports/review_audit.md`](reports/review_audit.md)
+and reproducible with `python scripts/audit_review_decisions.py`. The review
+interface, the decision-store rules, and the audit's findings and residual
+limits are described in [`docs/human_review.md`](docs/human_review.md); §13 of
+this README covers the commands.
+
+Principal limitations (full list in [`docs/limitations.md`](docs/limitations.md)):
+
+- Answers remain caption-grounded candidates; the review records a human
+  judgement over them but did not capture per-decision visual evidence.
+- 641 of 1,273 source clips yield questions; the rest lack sufficient grounded
+  evidence or any recognisable object.
+- The uniqueness guard is deliberately conservative, trading yield for safety.
+- Only three question templates; a curated object lexicon.
+- One whole-clip caption window per clip; no sub-clip windowing.
+- Caption timestamps are internally consistent but not pixel-verified.
+- Redistribution rights unresolved; no root license chosen.
 
 Principal limitations (full list in [`docs/limitations.md`](docs/limitations.md)):
 
@@ -288,37 +330,54 @@ Validating an already-prepared dataset needs neither network nor the source
 videos' bytes beyond what is local:
 
 ```bash
-make test            # 211 CPU-only unit tests
+make test            # 244 CPU-only unit tests
 make validate        # 0 hard failures expected
 ```
 
 `make validate` exits non-zero if any hard check fails, and always writes
 `bridgedata2_temporal_mcq/reports/validation_report.json`.
 
-## 13. Human visual verification (local, in progress)
+## 13. Human visual review (local)
 
-Verification runs against the **actual videos**, not the captions. It is a local
-web interface; nothing is uploaded and no model or GPU is involved.
+Review runs against the **actual videos**, not the captions. It is a local web
+interface; nothing is uploaded and no model or GPU is involved.
 
 ```bash
 make review           # serve http://127.0.0.1:8765/ and open a browser
-make review-summary   # review status summary
+make review-summary   # review status summary (markdown)
+
+# The audit is a read-only, reproducible report over the decision file:
+python scripts/audit_review_decisions.py          # human-readable
+python scripts/audit_review_decisions.py --json   # machine-readable
 ```
 
 The interface plays the source clip with seek and frame-step controls, shows the
 question, options, proposed answer, and the evidence window, and records one of
 `verified` / `incorrect` / `ambiguous` / `unverifiable` plus an optional
-corrected answer, reason code and notes.
+corrected answer, reason code and notes. It is described in full in
+[`docs/human_review.md`](docs/human_review.md).
 
-Decisions are stored in an **append-only** file (`reports/review_decisions.jsonl`)
-and never modify the annotations. An edit becomes a new revision; earlier
-revisions are retained. Decisions are bound to an annotation content hash, so a
-decision made against changed content is reported as **stale** rather than
-silently applied.
+### Decision store and effective decisions
 
-**Current status: 0 of 1,052 questions verified.** The summary reports
-unreviewed questions in their own bucket, and no code path can mark a question
-verified automatically. See [`docs/human_review.md`](docs/human_review.md).
+Decisions are stored in an **append-only** file (`reports/review_decisions.jsonl`,
+excluded from version control) and never modify the annotations. An edit becomes
+a **new revision**; the earlier record is retained, so the file is a full audit
+trail. The **effective decision** for a question is the highest `revision`;
+superseded revisions are kept and counted, never overwritten. A decision is bound
+to an annotation content hash, so a decision made against content that has since
+changed is reported as **stale** rather than silently applied. The summary
+reports the reviewed rate as the complement of the unreviewed rate.
+
+### Current status
+
+Review is **complete**: all 1,052 questions have a recorded decision, with 644
+effective `verified`, 55 `incorrect`, 353 `ambiguous`, 0 `unverifiable`, and 57
+corrected answers (see §10). The recorded decisions are consistent and
+reproducible; the audit's caveat is that the records do not independently
+reconstruct per-decision visual evidence. The final **verified dataset has not
+been materialized** — that, and any publication, are separate future steps. See
+[`docs/human_review.md`](docs/human_review.md) and
+[`reports/review_audit.md`](reports/review_audit.md).
 
 ## 14. Repository structure
 
@@ -347,11 +406,13 @@ cosmos3-temporal-mcq/
 │   ├── review.py               # decision store, integrity, accounting
 │   └── review_server.py        # local review interface (stdlib HTTP + ranges)
 ├── scripts/                    # thin CLI wrappers (backwards compatible)
-├── tests/                      # 211 CPU-only unit tests
+│   └── audit_review_decisions.py  # read-only review-decision audit
+├── tests/                      # 244 CPU-only unit tests
 ├── examples/
 │   └── sample_annotations.jsonl   # hand-written, synthetic
 └── reports/
-    └── dataset_audit.md        # committed (aggregate only)
+    ├── dataset_audit.md        # committed (aggregate only)
+    └── review_audit.md         # committed review-decision audit (aggregate only)
 ```
 
 Not committed (see `.gitignore`): `data/raw/`, prepared video trees, full
@@ -368,12 +429,23 @@ virtualenvs, model checkpoints. Rationale in
 - [x] CPU-only validation entry point and unit tests
 - [x] **Review tooling**: local verification interface, append-only decision
       store, integrity checks and summary reporting
-- [ ] **Human visual verification** of the generated answers (0 / 1,052 done)
-- [ ] Apply review decisions as a non-destructive overlay
+- [x] **Human visual review** of the generated answers
+      (1,052 / 1,052 questions have a recorded decision)
+- [x] **Review-decision audit**: read-only, reproducible integrity report
+      (`reports/review_audit.md`)
+- [ ] **Materialize the verified dataset** as a versioned release, applying the
+      review decisions as a non-destructive overlay
 - [ ] Cosmos 3 Nano **zero-shot** evaluation on the verified test split
 - [ ] **LoRA fine-tune** via TAO Cosmos-RL
 - [ ] Zero-shot vs LoRA comparison with paired uncertainty
-- [ ] Publish the verified dataset subject to a licensing review
+- [ ] Publish a dataset release subject to a licensing review (separate step;
+      the final dataset has **not** been created and nothing is on Hugging Face)
+
+> Dataset materialization and Hugging Face publication are **separate** steps,
+> neither of which has been performed. The upstream source is licensed
+> `LicenseRef-OpenMDW-1.1` and redistribution rights are not yet cleared, so no
+> source videos, source-derived dataset release, or review artifacts have been
+> uploaded.
 
 ## 16. Citation and license
 

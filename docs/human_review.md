@@ -1,11 +1,24 @@
 # Human review workflow
 
-**Status: not started.** No question in this dataset has been visually
-verified. Every record carries `visual_verification: pending`, and the review
-summary reports **0 reviewed / 1052 unreviewed**.
+**Status: review complete and audited. The final verified dataset has not been
+materialized.**
+
+The human visual review has been **completed and recorded**: every one of the
+1,052 questions has a recorded decision, made by watching the source video. The
+decisions are **644 `verified`, 55 `incorrect`, 353 `ambiguous`, 0
+`unverifiable`**, with **57 corrected answers** and **3 superseded (retained)
+revisions** — 1,055 decision records in all. The decision file and its audit are
+described below.
+
+The recorded decisions are internally consistent and reproducible. They do
+**not**, however, independently reconstruct the visual evidence behind each
+decision — see §7, which states plainly what the records do and do not
+establish. Decision records being consistent is not proof that any individual
+answer is correct.
 
 This document explains what has and has not been checked, why contact sheets
-are not sufficient, and how to run the review interface.
+are not sufficient, how to run the review interface, and how to audit the
+decisions.
 
 ## 1. What has and has not been checked
 
@@ -13,7 +26,9 @@ are not sufficient, and how to run the review interface.
 |---|---|---|
 | Automated structural validation | **Passing** (0 hard, 0 soft failures) | The files parse, ids are unique, every question has four distinct options and a valid answer letter, splits do not leak, media resolve, and the TAO schema accepts the envelopes |
 | Automated TAO schema compatibility | **Passing** | The real Cosmos-RL validator classifies the data as `task_aware_video_reasoning` / `mcq` / `answer_type=letter` |
-| Human visual verification | **Pending** | That the answer is actually correct **in the video** |
+| Human visual review | **Recorded — 1,052 / 1,052** | A recorded human judgement that the option is (or is not) supported by the video |
+| Independently auditable visual evidence | **Not established** | The records reproduce the *accounting*, not *what was seen* per decision (§7) |
+| Final verified dataset | **Not created** | Materialization is a separate future step |
 
 Automated validation proves the dataset is *well-formed*. It says nothing about
 whether an answer is *true*. Because the captions are synthetic and unverified,
@@ -174,12 +189,17 @@ The file is **append-only**. One JSON object per line:
 | `revision` | 1 for the first decision, incremented on each edit |
 | `supersedes` | Timestamp of the decision this one replaces |
 
-### Duplicate decisions and edits
+### Effective decisions, duplicates and edits
 
 A second decision for the same question is written as a **new revision**; the
-earlier one stays in the file. Reading collapses the file to the latest revision
-per question, and reports the count of superseded revisions. **Nothing is ever
-silently discarded.**
+earlier one stays in the file. Reading collapses the file to the **latest
+revision per question** — the *effective* decision — and reports the count of
+superseded revisions. All status and percentage figures are computed from
+effective decisions only, so a corrected answer that a later revision replaced
+is never counted. **Nothing is ever silently discarded.**
+
+In the current review set, the 1,055 records resolve to 1,052 effective
+decisions, with 3 superseded revisions retained.
 
 ### Stale decisions
 
@@ -219,8 +239,32 @@ The summary reports:
 - questions whose source video could not be found (these cannot be reviewed
   visually).
 
-Until the review is complete, every accuracy figure is a partial number and must
-be reported with the verified / excluded / pending breakdown. See
+The summary computes the reviewed rate as the complement of the unreviewed
+rate and exposes both as `reviewed_percent` / `unreviewed_percent`, so JSON
+consumers get the same numbers the rendered summary shows. An empty dataset
+reports `0.0` for both rather than a vacuous `100%`.
+
+### Auditing the decisions
+
+The audit is a separate, read-only report. It re-derives every count and
+integrity check independently of the summary code:
+
+```bash
+python scripts/audit_review_decisions.py          # human-readable
+python scripts/audit_review_decisions.py --json   # machine-readable
+```
+
+It checks, among other things: unknown question ids, invalid answer keys,
+invalid status/reason codes, missing reviewer ids, malformed `decided_at_seconds`,
+missing or stale fingerprints, split / `source_video_id` / `proposed_answer`
+mismatches against the annotations, non-contiguous revisions, corrections that
+are not the latest effective decision, and every referenced source video
+resolving. Its findings are graded `FAIL` (blocks materialization), `WARN`
+(recorded weakness), and `INFO`. The current run: **0 failures, 4 warnings**,
+recorded in [`../reports/review_audit.md`](../reports/review_audit.md).
+
+Accuracy figures must always be reported with the verified / excluded /
+ambiguous breakdown, never as a bare number. See
 [`evaluation_protocol.md`](evaluation_protocol.md).
 
 ## 7. Applying decisions
@@ -235,9 +279,27 @@ annotations.
 - no decision → excluded from any reported accuracy, and counted as unreviewed
   so the shortfall stays visible.
 
-A loader that materialises the overlay into an evaluation set is a reasonable
-next step and is listed in the roadmap.
+**Materializing the overlay into a versioned dataset has not been done.** It is
+the next planned step, tracked separately from any Hugging Face publication; the
+two are distinct and neither has been performed.
+
+### What the records do and do not establish
+
+- **Established:** all 1,052 questions have a recorded decision; the decision
+  file is append-only with 1,055 records and 3 superseded revisions retained;
+  every effective decision resolves to the highest revision; no decision is
+  stale; all 57 corrections are valid and final; the counts reconcile with an
+  independent recount.
+- **Not established:** that the recorded `verified` status matches what is in
+  the video for any *specific* question. The records contain no free-text note
+  (0 of 644 verified), almost no clip position (1 of 644), and one reviewer id.
+  The final review session's wall clock is shorter than the combined runtime of
+  the videos it covers. Those are limitations of the *record keeping* — the
+  reviewer recorded completing the review by watching the clips — and they mean
+  audit consistency alone cannot prove visual correctness. Materializing a
+  verified dataset would rest on this unreviewed-evidence caveat.
 
 Do **not** mark a question `verified` without having watched the clip.
 Do **not** mark a question `verified` because automated validation passed.
+Do **not** treat passing audit checks as proof that an answer is correct.
 Do **not** use test-split review outcomes to tune prompts or hyperparameters.
