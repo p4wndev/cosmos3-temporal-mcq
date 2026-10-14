@@ -136,18 +136,14 @@ The answer-only LoRA adapter achieved the highest accuracy among these three con
 In a paired comparison, the answer-only LoRA corrected 30 examples that zero-shot inference answered incorrectly, with no regressions among the examples answered correctly by zero-shot inference.
 
 ## Demo
-reasoning-distilled-adapter
-<video src="./demo/reasoning-distilled-adapter/demo_04.mp4"
-       controls
-       playsinline
-       width="100%">
-</video>
-answer-only-adapter
-<video src="./demo/answer-only-adapter/demo_01.mp4"
-       controls
-       playsinline
-       width="100%">
-</video>
+
+### Reasoning-distilled adapter
+
+![Reasoning-distilled adapter](./demo/reasoning-distilled-adapter/demo_04.gif)
+
+### Answer-only adapter
+
+![Answer-only adapter](./demo/answer-only-adapter/demo_01.gif)
 
 **How to interpret these results**
 
