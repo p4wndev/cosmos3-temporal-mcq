@@ -155,6 +155,14 @@ In a paired comparison, the answer-only LoRA corrected 30 examples that zero-sho
 
 These experiments provide an initial benchmark for this dataset. Broader evaluation across more videos, task types, and model configurations is needed to assess generalization.
 
+### Conclusion (Current experiment)
+
+In this experiment, LoRA fine-tuning substantially improved Cosmos 3 Edge over its zero-shot baseline on the frozen 64-example test split. The answer-only adapter raised accuracy from 43.75% to 90.63% and reduced mean latency from 10.81 s to 0.44 s. Part of this gain likely reflects the adapter learning the required answer format: 16 of the 64 zero-shot outputs could not be parsed and were counted as incorrect. The comparison should therefore not be read as a pure measure of improved visual understanding.
+
+The reasoning-distilled adapter produced longer, explanation-style responses but reached 68.75% accuracy, below the answer-only adapter. Because the two adapters were trained with different targets and loss compositions, this gap should not be attributed to reasoning itself without further controlled ablations.
+
+All runs used a single fixed hyperparameter configuration (LoRA rank 8, alpha 16, learning rate 1e-5, 3 epochs) and a single random seed, without a systematic search. Given more time and compute, i recommend automated hyperparameter optimization, such as Bayesian optimization (e.g., Optuna with TPE or Gaussian-process-based search) or an AutoML framework. The search could cover the learning rate, LoRA rank, alpha and dropout, target modules, number of epochs, and number of sampled frames.The best configurations should be repeated across multiple seeds before a single final test evaluation. This would show how sensitive the reported results are to the training configuration and give more reliable estimates for practical deployment.
+
 ## Human Review and Quality Control
 
 All **1,052 candidate questions** were reviewed against their source videos by the dataset owner. The review process recorded answer confirmations, corrections, and exclusion decisions.
