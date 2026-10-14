@@ -6,7 +6,7 @@ task_categories:
   - video-text-to-text
 task_ids:
   - multiple-choice-qa
-pretty_name: "Cosmos 3 Temporal MCQ (BridgeData2, human-verified)"
+pretty_name: "Cosmos 3 Temporal MCQ (BridgeData2, Human-Verified)"
 size_categories:
   - n<1K
 tags:
@@ -28,160 +28,233 @@ configs:
 
 # Cosmos 3 Temporal MCQ
 
-A human-verified multiple-choice video QA dataset for **temporal reasoning in
-robot manipulation**, prepared for **Cosmos 3** (Nano) video-reasoning and LoRA
-experiments with the NVIDIA TAO **Cosmos-RL** recipe.
+**Cosmos 3 Temporal MCQ** is a human-reviewed multiple-choice video question-answering dataset for **temporal reasoning in robot manipulation**. It is derived from the NVIDIA BridgeData2 synthetic-caption dataset and was prepared for video-reasoning experiments, including LoRA fine-tuning and evaluation with NVIDIA Cosmos 3.
 
-Each example is one multiple-choice question about one short robot-manipulation
-clip, with four options labelled `A`–`D` and a single correct letter. Questions
-probe three temporal-reasoning categories: action/object understanding, temporal
-order and state change, and observed outcome.
+Each example contains a question about a short robot-manipulation clip, four answer options labeled `A`–`D`, and one correct answer. The questions cover three categories:
 
-## Dataset summary
+- **Action/object understanding:** identifying actions, objects, and their interactions.
+- **Temporal order and state change:** reasoning about event sequences and changes over time.
+- **Observed outcome:** identifying the outcome of an observed action.
 
-| | |
+The released dataset contains only reviewed annotations and source-video references, not the video files themselves.
+
+## Dataset Summary
+
+| Property | Value |
 |---|---|
-| Examples | **644** verified (train **523** / validation **57** / test **64**) |
-| Distinct source videos | **476** (train 383 / validation 44 / test 49) |
-| Excluded | 408 (353 ambiguous, 55 incorrect) |
-| Categories | action/object understanding · temporal order & state change · observed outcome |
-| Answer format | four options `A`–`D`; assistant turn is the option letter |
-| Source | `nvidia/BridgeData2-Subset-Synthetic-Captions` @ `e841d88db9f36caa4c805c31509712676c0fda0e` |
-| Bundle | `v0.2.0-cosmos3-lora`, media mode **`reference`** (no video bytes) |
-| Fingerprint | `fece449f0d04c00b976fa2f58cd15fc8d436d1506ce8a902097544432285f57e` |
+| Verified examples | **644** |
+| Train / validation / test | 523 / 57 / 64 |
+| Distinct source videos | **476** |
+| Source videos by split | 383 / 44 / 49 |
+| Excluded candidates | 408 (353 ambiguous, 55 incorrect) |
+| Answer format | One letter: `A`, `B`, `C`, or `D` |
+| Source dataset | `nvidia/BridgeData2-Subset-Synthetic-Captions` |
+| Pinned source revision | `e841d88db9f36caa4c805c31509712676c0fda0e` |
+| Bundle version | `v0.2.0-cosmos3-lora` |
+| Media mode | `reference` — video bytes are not included |
+| Dataset fingerprint | `fece449f0d04c00b976fa2f58cd15fc8d436d1506ce8a902097544432285f57e` |
 
-Splits are inherited unchanged from a **source-video-level** split, so no clip
-appears in more than one split. The test split is frozen.
+The train, validation, and test splits inherit a **source-video-level split**, preventing clips from the same source video from appearing across different splits. The test split is frozen for reproducible comparisons.
 
-## Quick start
+## Quick Start
 
-The published bundle contains the annotations and mapping but **not** the 476
-source videos (media mode `reference`). Fetch and bind the videos from the
-pinned upstream revision before preparing training data.
+The published bundle includes annotations and source-video mappings, but **does not include the 476 source videos**. Download and bind the required videos from the pinned upstream revision before preparing training data.
+
+### 1. Download the dataset
+
+Install the Hugging Face Hub CLI if needed:
 
 ```bash
-# 1. Install the Hugging Face CLI (if not already present)
-pip install -U "huggingface_hub[cli]"
+pip install -U huggingface_hub
+```
 
-# 2. Download the dataset at the pinned revision (reproducible example)
-hf download p4wndev/cosmos3-temporal-mcq --repo-type dataset \
+Download a specific dataset revision for reproducibility:
+
+```bash
+hf download p4wndev/cosmos3-temporal-mcq \
+  --repo-type dataset \
   --revision e4c2cb935f97162e38c70616066934d987d503df \
   --local-dir ./datasets/cosmos3-temporal-mcq
-# For the latest version instead, omit --revision (not reproducible).
+```
 
-# 3. Fetch and bind the pinned upstream videos (maps by id, verifies checksums)
+Omit `--revision` to download the latest version instead. For reproducible experiments, use a pinned revision.
+
+### 2. Download and bind the source videos
+
+```bash
 python ./datasets/cosmos3-temporal-mcq/scripts/download_videos.py \
   --root ./datasets/cosmos3-temporal-mcq
+```
 
-# 4. Verify the annotations and the bound media
+The script resolves each required clip through the authoritative `source_video_id` → upstream `uuid` mapping and validates file size and SHA-256 checksums.
+
+### 3. Verify the dataset
+
+```bash
 python ./datasets/cosmos3-temporal-mcq/scripts/verify_dataset.py \
-  --root ./datasets/cosmos3-temporal-mcq --require-videos
+  --root ./datasets/cosmos3-temporal-mcq \
+  --require-videos
+```
 
-# 5. Prepare the Cosmos-RL training inputs
+### 4. Prepare Cosmos-RL training inputs
+
+```bash
 python ./datasets/cosmos3-temporal-mcq/scripts/prepare_training_data.py \
   --root ./datasets/cosmos3-temporal-mcq \
   --output ./datasets/cosmos3-temporal-mcq-prepared
 ```
 
-The three scripts are pure standard library and run without a repository
-checkout. Run them from anywhere; pass `--root` the bundle directory.
+The preparation script generates per-split `annotations.json` files using the TAO `tao-vl-reason-v1.0` schema, with `task: mcq`, along with a media-root mapping. It prints the corresponding `--train_annotations` and `--media_roots` arguments and defaults to the `train` and `validation` splits.
 
-- `download_videos.py` requires network access and access to
-  `nvidia/BridgeData2-Subset-Synthetic-Captions`. It resolves each required clip
-  by the authoritative `source_video_id` → upstream `uuid` and validates size
-  and SHA-256 (the underlying Hub fetch is cached/resumable). Re-running it is
-  idempotent. Use `--verify-only` to re-check an already-bound tree, or
-  `--upstream-dir <path>` to bind from a local copy.
-- `prepare_training_data.py` writes per-split `annotations.json` (TAO
-  `tao-vl-reason-v1.0`, `task: mcq`) plus a media-root mapping, and prints the
-  `--train_annotations` / `--media_roots` arguments. It defaults to
-  `train,validation`.
+The three scripts use the Python standard library and can run without a repository checkout. Run them from any working directory and pass the dataset bundle location through `--root`.
 
-Approximate sizes: annotations ~1.4 MB; the 476 required videos ~230 MB.
+Useful options for `download_videos.py`:
 
-## What is validated, and what is not
+- `--verify-only`: verify an already-bound video tree.
+- `--upstream-dir <path>`: bind videos from a local upstream copy.
 
-- **Validated.** Structural integrity (unique ids, four distinct options, valid
-  answer letters, no split leakage), and TAO annotation-schema compatibility
-  (`tao-vl-reason-v1.0`, task-aware `mcq`, `answer_type: letter`), accepted by
-  the packaged Cosmos-RL dataset inspector.
-- **Not validated.** End-to-end Cosmos 3 **training** has **not** been run. No
-  model has been trained, benchmarked, or evaluated, and no training performance
-  is claimed. TAO annotation validation is not a Cosmos 3 compatibility
-  guarantee.
+Video downloads require network access and access to the upstream Hugging Face dataset. Downloads are cached and resumable, and repeated runs are designed to be idempotent.
 
-## Human review
+Approximate storage requirements:
 
-All 1,052 candidate questions were reviewed against the source video by the
-dataset owner, who confirmed the answers and recorded corrections. **644** are
-`verified` and included; `55` `incorrect` and `353` `ambiguous` are excluded.
+- Annotation bundle: **1.4 MB**
+- Required source videos: **230 MB**
+- Full reproduction workspace: approximately **0.7 GB**
 
-Review is complete. The stored records are structurally consistent and
-reproducible, but they do **not** independently reconstruct detailed visual
-evidence for every decision (no per-decision notes, and timing arithmetic that
-does not reconcile with full clip playback). That is a limitation of the
-*record*, not a finding that individual decisions are wrong. See
-[`docs/human_review.md`](docs/human_review.md) and
-[`reports/review_audit.md`](reports/review_audit.md).
+## Model Experiments
 
-Of the 57 recorded answer corrections, 55 fall on `incorrect` decisions
-(excluded) and 2 fall on `verified` decisions (included). The released dataset
-applies those 2 corrections.
+Cosmos 3 experiments were conducted using this dataset to compare zero-shot inference with LoRA fine-tuning. The following results use the frozen **64-example test split**.
 
-## Repository contents
+| Method | Accuracy | Correct | Mean generated tokens | Mean latency per example |
+|---|---:|---:|---:|---:|
+| Cosmos 3 Edge, zero-shot | 43.75% | 28/64 | 320.55 | 10.81 s |
+| Cosmos 3 Edge, answer-only LoRA | **90.63%** | **58/64** | 4.00 | 0.44 s |
+| Cosmos 3 Edge, reasoning-distilled LoRA | 68.75% | 44/64 | 216.58 | 9.66 s |
 
-This repository is the **source-of-truth code and documentation** project. It
-contains the pipeline that produced the dataset, the human-review tooling, and
-the release/bundle builders. Raw videos, full annotations, review decisions and
-built releases are excluded from version control.
+The answer-only LoRA adapter achieved the highest accuracy among these three configurations. It also produced shorter outputs and lower measured latency because it was trained to return the answer letter directly. The reasoning-distilled adapter retained a longer response format but achieved lower accuracy on this test set.
+
+In a paired comparison, the answer-only LoRA corrected 30 examples that zero-shot inference answered incorrectly, with no regressions among the examples answered correctly by zero-shot inference.
+
+## Demo
+reasoning-distilled-adapter
+<video src="./demo/reasoning-distilled-adapter/demo_04.mp4"
+       controls
+       playsinline
+       width="100%">
+</video>
+answer-only-adapter
+<video src="./demo/answer-only-adapter/demo_01.mp4"
+       controls
+       playsinline
+       width="100%">
+</video>
+
+**How to interpret these results**
+
+- These are results from a small test set of 64 examples; they should be treated as preliminary rather than conclusive evidence of generalization.
+- Latency and throughput depend on the hardware, inference configuration, and runtime environment. The reported latency is specific to the experiment and should not be generalized to other deployments.
+- Answer-only and reasoning-distilled LoRA use different output targets, so their accuracy and generation lengths reflect different training objectives.
+- The results do not establish performance on other robotics datasets, unseen task distributions, or real-world deployment scenarios.
+- The reported benchmark does not, by itself, demonstrate that every generated answer is supported by detailed visual evidence.
+
+These experiments provide an initial benchmark for this dataset. Broader evaluation across more videos, task types, and model configurations is needed to assess generalization.
+
+## Human Review and Quality Control
+
+All **1,052 candidate questions** were reviewed against their source videos by the dataset owner. The review process recorded answer confirmations, corrections, and exclusion decisions.
+
+| Review outcome | Count | Released? |
+|---|---:|---|
+| Verified | 644 | Yes |
+| Incorrect | 55 | No |
+| Ambiguous | 353 | No |
+| **Total reviewed** | **1,052** | |
+
+Of the 57 recorded answer corrections, 55 belong to questions classified as `incorrect` and excluded from the release. The remaining two belong to `verified` questions and are reflected in the released annotations.
+
+Review is complete, and the released records are structurally consistent and reproducible. However, the stored review records do not independently reconstruct detailed visual evidence for every decision: there are no per-decision notes, and some recorded timing arithmetic does not reconcile with full clip playback. This is a limitation of the audit record, not a finding that individual review decisions are necessarily wrong.
+
+For the review criteria, process, and audit limitations, see:
+
+- [`docs/human_review.md`](docs/human_review.md)
+- [`reports/review_audit.md`](reports/review_audit.md)
+
+## Validation Status
+
+**Validated**
+
+- Structural integrity, including unique identifiers, four distinct answer options, and valid answer letters.
+- Split integrity, including source-video-level separation between train, validation, and test.
+- Compatibility with the TAO `tao-vl-reason-v1.0` annotation schema for task-aware MCQ examples with `answer_type: letter`.
+- Acceptance by the packaged Cosmos-RL dataset inspector.
+- Human review of the released questions against their source videos.
+
+**Evaluated**
+
+- Zero-shot and LoRA configurations were benchmarked on the frozen 64-example test split.
+- Accuracy, output length, and inference latency were recorded for the tested configurations.
+
+**Not established**
+
+- Generalization beyond the released test set.
+- Performance across other robotics tasks, datasets, or deployment environments.
+- Independent reconstruction of detailed visual evidence for every human-review decision.
+- Broad Cosmos 3 compatibility beyond the model configuration and workflow used in the reported experiments.
+
+Schema validation is not a guarantee of compatibility with every Cosmos 3 training configuration. Likewise, a successful benchmark on this dataset does not establish general-purpose video reasoning capability.
+
+## Repository Contents
+
+This repository is the source-of-truth project for dataset generation, validation, review tooling, and release preparation. Raw videos, full annotations, individual review decisions, and generated release bundles are excluded from version control.
 
 | Path | Contents |
 |---|---|
-| `DATASET_CARD.md` | dataset card: structure, methodology, fields, licensing |
-| `docs/human_review.md` | human-review criteria, process, and limitations |
-| `docs/dataset_provenance.md` | upstream source, mapping, lineage, fingerprints |
-| `docs/annotation_guidelines.md` | question construction and acceptance rules |
-| `docs/evaluation_protocol.md` | planned zero-shot vs LoRA evaluation protocol |
-| `docs/limitations.md` | known limitations |
-| `src/temporal_mcq/`, `scripts/`, `tests/` | implementation and CPU-only tests |
-| `reports/` | aggregate audit reports (no per-question data) |
+| `DATASET_CARD.md` | Dataset structure, methodology, fields, and licensing notes |
+| `docs/human_review.md` | Human-review criteria, process, and limitations |
+| `docs/dataset_provenance.md` | Upstream source, mapping, lineage, and fingerprints |
+| `docs/annotation_guidelines.md` | Question construction and acceptance rules |
+| `docs/evaluation_protocol.md` | Evaluation protocol for zero-shot and LoRA experiments |
+| `docs/limitations.md` | Known limitations |
+| `src/temporal_mcq/`, `scripts/`, `tests/` | Implementation, scripts, and CPU-only tests |
+| `reports/` | Aggregate audit reports without per-question data |
 
-To reproduce the dataset from source (needs ~0.7 GB disk and network):
+To reproduce the dataset from source, with network access and approximately 0.7 GB of workspace storage:
 
 ```bash
-make download && make generate && make build && make validate
-make materialize && make build-training-bundle   # -> dist/v0.2.0-cosmos3-lora
+make download
+make generate
+make build
+make validate
+
+make materialize
+make build-training-bundle
 ```
+
+The final command builds the `dist/v0.2.0-cosmos3-lora` bundle.
 
 ## Limitations
 
-- Answers are caption-grounded; the human review confirmed the answer against the
-  video, not full caption accuracy.
-- The dataset is small; per-category counts in validation/test are in the tens.
-- Only three fixed question templates are used.
-- Redistribution rights for the derived annotations and the source videos remain
-  unresolved; the published bundle therefore ships without video bytes. See
-  [`docs/dataset_provenance.md`](docs/dataset_provenance.md) and
-  [`docs/limitations.md`](docs/limitations.md).
+- **Caption-grounded questions:** the questions and candidate answers are derived from synthetic captions. Human review checked answers against the source videos, but did not establish the full accuracy of every caption.
+- **Small dataset:** 644 verified examples are available, with only 57 validation and 64 test examples.
+- **Limited question diversity:** the dataset uses three fixed question categories and a limited set of question templates.
+- **Reference-only media:** source videos are not included in the published bundle and must be obtained from the upstream dataset.
+- **Unresolved redistribution rights:** the rights to redistribute derived annotations, source videos, and this code have not been fully established.
+- **Limited audit traceability:** the stored review records do not contain detailed visual evidence for every individual decision.
 
-## Citation and license
+See [`docs/dataset_provenance.md`](docs/dataset_provenance.md) and [`docs/limitations.md`](docs/limitations.md) for further details.
 
-If you use this dataset, cite the upstream BridgeData V2 paper (the source
-dataset asks for it):
+## Citation and License
 
-> Walke, H., et al. "BridgeData V2: A Dataset for Robot Learning at Scale."
-> *Conference on Robot Learning (CoRL)*, 2023. arXiv:2308.12952
+If you use this dataset, please cite the upstream BridgeData V2 paper:
 
-The upstream dataset is `nvidia/BridgeData2-Subset-Synthetic-Captions` at
-revision `e841d88db9f36caa4c805c31509712676c0fda0e`, declared license
-`LicenseRef-OpenMDW-1.1`. **Redistribution rights for the derived annotations,
-the videos, and this code are not yet established**; no license is granted (see
-[`LICENSE`](LICENSE)). Do not assume reuse rights. See
-[`docs/dataset_provenance.md`](docs/dataset_provenance.md) for the open
-questions.
+> Walke, H., et al. "BridgeData V2: A Dataset for Robot Learning at Scale." *Conference on Robot Learning (CoRL)*, 2023. [arXiv:2308.12952](https://arxiv.org/abs/2308.12952)
+
+The upstream source is [`nvidia/BridgeData2-Subset-Synthetic-Captions`](https://huggingface.co/datasets/nvidia/BridgeData2-Subset-Synthetic-Captions), pinned to revision `e841d88db9f36caa4c805c31509712676c0fda0e`, with the declared license `LicenseRef-OpenMDW-1.1`.
+
+**Redistribution rights for the derived annotations, source videos, and this code have not yet been established. No license is granted by this repository.** Do not assume that the dataset or its derivatives can be redistributed or used without additional permission. See [`LICENSE`](LICENSE) and [`docs/dataset_provenance.md`](docs/dataset_provenance.md) for the current licensing notes.
 
 ## Links
 
-- Dataset: <https://huggingface.co/datasets/p4wndev/cosmos3-temporal-mcq>
-- Source dataset: <https://huggingface.co/datasets/nvidia/BridgeData2-Subset-Synthetic-Captions>
-- BridgeData V2: <https://rail-berkeley.github.io/bridgedata/>
+- **Dataset:** [p4wndev/cosmos3-temporal-mcq](https://huggingface.co/datasets/p4wndev/cosmos3-temporal-mcq)
+- **Upstream source dataset:** [nvidia/BridgeData2-Subset-Synthetic-Captions](https://huggingface.co/datasets/nvidia/BridgeData2-Subset-Synthetic-Captions)
+- **BridgeData V2 project:** [rail-berkeley.github.io/bridgedata](https://rail-berkeley.github.io/bridgedata/)
