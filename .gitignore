@@ -28,7 +28,7 @@ reports/review_decisions*.jsonl
 releases/
 
 # Generated media of any kind
-*.mp4
+# *.mp4
 *.mov
 *.mkv
 *.avi
